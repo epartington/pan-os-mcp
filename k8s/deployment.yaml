@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: panos-mcp-deployment
+  namespace: panos
+  labels:
+    app: panos-mcp
+spec:
+  replicas: 2 # Start with 2 replicas for availability
+  selector:
+    matchLabels:
+      app: panos-mcp
+  template:
+    metadata:
+      labels:
+        app: panos-mcp
+    spec:
+      # Add imagePullSecrets to allow pulling from private container registry
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: panos-mcp
+          # Replace with your actual image repository and tag
+          image: ghcr.io/cdot65/panos-mcp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          env:
+            - name: LOG_LEVEL
+              value: "info"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10

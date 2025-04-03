@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: panos-mcp-service
+  namespace: panos
+  labels:
+    app: panos-mcp
+  annotations:
+    # MetalLB annotation to request a specific IP
+    metallb.universe.tf/loadBalancerIPs: 10.0.0.64
+spec:
+  selector:
+    app: panos-mcp
+  ports:
+    - protocol: TCP
+      port: 80 # Port the service is exposed on externally (within the cluster via LB)
+      targetPort: 80 # Port the application container is listening on
+      name: http
+  type: LoadBalancer

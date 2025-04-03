@@ -1,0 +1,19 @@
+Use HTTPS for all API communications: All requests from Windsurf to the MCP server must use HTTPS to ensure secure communication, aligning with the TLS termination requirement at Traefik.
+
+Authenticate requests with API key: Windsurf must include the Palo Alto API key in requests when required, either directly or via environment configuration, to maintain secure access to the NGFW XML API.
+
+Fetch available tools before execution: Windsurf must call the `/mcp/tools` endpoint to retrieve the list of available tools and their parameters before attempting to execute any tool, ensuring compatibility with the MCP server's capabilities.
+
+Structure tool execution requests correctly: Windsurf must format POST requests to `/mcp/execute` with a JSON body containing `tool` (string) and `parameters` (object) keys, matching the MCP server's expected request schema.
+
+Handle default parameters gracefully: Windsurf should use default parameter values (`location: "vsys"`, `vsys: "vsys1"`) when not specified by the user, ensuring consistent behavior with the MCP server's tool definitions.
+
+Validate tool names before execution: Windsurf must verify that the requested tool name matches one returned by `/mcp/tools` to prevent invalid requests and reduce error handling overhead on the server.
+
+Parse JSON responses consistently: Windsurf must expect and handle JSON responses with `result` and `status` fields from the `/mcp/execute` endpoint, ensuring proper integration with the server's output format.
+
+Implement retry logic for transient failures: Windsurf should include retry logic with exponential backoff for HTTP 500 errors or network timeouts from the MCP server, improving reliability in production environments.
+
+Log all API interactions: Windsurf must log request details (endpoint, tool, parameters) and response status for debugging and auditing purposes, supporting the project's monitoring requirements.
+
+Restrict tool usage to defined scope: Windsurf should only call the three specified tools (`retrieve_address_objects`, `retrieve_security_zones`, `retrieve_security_policies`) and avoid attempting undefined operations, maintaining project scope integrity.
