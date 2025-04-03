@@ -59,7 +59,7 @@ The MCP server is a FastAPI application designed to interact with Palo Alto Netw
    ```bash
    poetry run python -m src.panos_mcp
    ```
-   
+
 Or using the Makefile:
 
    ```bash
@@ -114,7 +114,7 @@ Or using the Makefile:
    ```bash
    make deploy
    ```
-   
+
 Or manually:
 
    ```bash

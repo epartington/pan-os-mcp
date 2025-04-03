@@ -1,4 +1,4 @@
-.PHONY: build run test lint format clean help test-api test-root test-health test-tools test-execute test-execute-zones test-execute-policies
+.PHONY: build run test lint format clean help test-api test-root test-health test-tools test-execute test-execute-zones test-execute-policies isort black pre-commit pre-commit-install security-scan checkov gitleaks
 
 SHELL := /bin/bash
 PROJECT_NAME := panos-mcp
@@ -22,10 +22,31 @@ test:  ## Run tests
 	poetry run python -m pytest
 
 lint:  ## Run linting checks
-	poetry run flake8 src tests
+	poetry run flake8 src
 
 format:  ## Format code using ruff
-	poetry run ruff format src tests
+	poetry run ruff format src
+
+isort:  ## Sort imports using isort
+	poetry run isort src
+
+black:  ## Format code using black
+	poetry run black src
+
+pre-commit:  ## Run pre-commit on all files
+	poetry run pre-commit run --all-files
+
+pre-commit-install:  ## Install pre-commit hooks
+	poetry run pre-commit install
+
+security-scan: checkov gitleaks  ## Run all security scanning tools
+
+checkov:  ## Run Checkov security scans
+	poetry run checkov --directory . --quiet
+
+gitleaks:  ## Run GitLeaks to detect secrets
+	@command -v gitleaks >/dev/null 2>&1 || { echo >&2 "gitleaks is not installed. Install it with 'brew install gitleaks'"; exit 1; }
+	gitleaks detect --source . --verbose
 
 clean:  ## Clean build artifacts
 	rm -rf __pycache__
@@ -44,6 +65,7 @@ deploy:  ## Deploy to Kubernetes
 
 dev-env:  ## Setup development environment
 	poetry install
+	$(MAKE) pre-commit-install
 
 # API Testing targets
 

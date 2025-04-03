@@ -6,7 +6,7 @@ authors = [
     {name = "Calvin Remsburg",email = "cremsburg@protonmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<4.0"
 dependencies = [
     "fastapi (>=0.115.12,<0.116.0)",
     "uvicorn (>=0.34.0,<0.35.0)",
@@ -22,4 +22,30 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.2.0"
 ruff = "^0.11.2"
+isort = "^5.13.2"
+pytest = "^8.0.0"
+black = "^24.3.0"
+mypy = "^1.8.0"
+pre-commit = "^3.5.0"
+# Pin checkov to a specific version to avoid dependency conflicts
+checkov = "2.5.9"
 
+[tool.ruff]
+line-length = 128
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E203"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["panos_mcp"]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "auto"
+
+[tool.black]
+line-length = 128
+target-version = ["py310"]

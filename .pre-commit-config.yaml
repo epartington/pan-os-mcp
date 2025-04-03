@@ -1,0 +1,62 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-json
+      - id: check-toml
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.2
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--line-length", "128"]
+
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: ["--line-length", "128"]
+
+  # Use local Checkov through Poetry
+  - repo: local
+    hooks:
+      - id: checkov
+        name: checkov
+        description: Scans Kubernetes manifests for security issues
+        entry: poetry run checkov
+        args: [
+          "--directory", "k8s",
+          "--framework", "kubernetes",
+          "--quiet",
+          "--compact",
+          "--skip-check", "CKV_K8S_37,CKV_K8S_38,CKV_K8S_43",
+          "--soft-fail"
+        ]
+        language: system
+        pass_filenames: false
+        types: [yaml]
+
+  # Use local installation of gitleaks
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks
+        description: Detect secrets in your code
+        entry: gitleaks detect
+        args: [--source, ., --verbose]
+        language: system
+        pass_filenames: false
+        types: [text]
