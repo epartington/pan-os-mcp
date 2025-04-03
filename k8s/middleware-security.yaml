@@ -1,0 +1,15 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+  namespace: panos
+spec:
+  headers:
+    frameDeny: true
+    contentTypeNosniff: true
+    browserXssFilter: true
+    contentSecurityPolicy: "default-src 'self'; script-src 'self'"
+    referrerPolicy: "strict-origin-when-cross-origin"
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 31536000
