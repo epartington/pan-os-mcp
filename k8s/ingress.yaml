@@ -6,25 +6,26 @@ metadata:
   labels:
     app: panos-mcp
   annotations:
-    # Assuming Traefik is your Ingress Controller
-    kubernetes.io/ingress.class: traefik
-    # Enable TLS termination
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # Traefik specific annotations
+    kubernetes.io/ingress.class: "traefik"
+    # Force HTTPS
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
     traefik.ingress.kubernetes.io/router.tls: "true"
+    # Chained middlewares for multiple security features
+    traefik.ingress.kubernetes.io/router.middlewares: "panos-redirect-scheme@kubernetescrd,panos-cors@kubernetescrd,panos-security-headers@kubernetescrd,panos-rate-limit@kubernetescrd"
 spec:
   tls:
     - hosts:
-        # Replace with your actual domain
         - mcp.cdot.io
-      secretName: panos-mcp-tls # Secret containing your TLS cert and key
+      secretName: panos-mcp-tls  # Uses our manually created TLS secret
   rules:
-    - host: mcp.cdot.io # Replace with your actual domain
+    - host: mcp.cdot.io  # Replace with your actual domain in production
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: panos-mcp-service # Name of the Service created earlier
+                name: panos-mcp-service
                 port:
-                  number: 80 # Port the Service is listening on
+                  number: 80
