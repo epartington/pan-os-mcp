@@ -131,10 +131,14 @@ def register_tools(server: Server) -> None:
             vsys = params.get("vsys")
 
             # Call Palo Alto API
+            logger.debug(f"Calling get_address_objects with location={location}, vsys={vsys}")
             address_objects = await get_address_objects(location, vsys)
+            logger.debug(f"Received address_objects from API: {address_objects}")
 
             # Format result as JSON string
             result = json.dumps(address_objects, indent=2)
+            logger.debug(f"Formatted JSON result: {result[:500]}...")
+
             logger.info(
                 json.dumps(
                     {
@@ -145,7 +149,11 @@ def register_tools(server: Server) -> None:
                 )
             )
 
-            return TextContent(result)
+            # Create TextContent response for MCP
+            response = TextContent(result)
+            logger.debug(f"Created TextContent response with type: {type(response)}, content_type: {response.content_type}")
+
+            return response
 
         except (ValueError, PaloAltoApiError) as e:
             logger.error(json.dumps({"request_id": request_id, "message": f"Error retrieving address objects: {str(e)}"}))

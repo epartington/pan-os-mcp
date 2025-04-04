@@ -60,8 +60,14 @@ async def make_api_request(endpoint: str, params: Optional[Dict[str, str]] = Non
             response = await client.get(base_url + endpoint, params=params)
             response.raise_for_status()
 
+            # Debug: Log the raw XML response
+            logger.debug(f"Raw XML response: {response.text[:500]}...")
+
             # Parse XML response to dict
             xml_dict = xmltodict.parse(response.text)
+
+            # Debug: Log the parsed dict
+            logger.debug(f"Parsed dict structure: {str(xml_dict.keys())}")
 
             # Check for API errors
             if "response" in xml_dict and "@status" in xml_dict["response"]:
@@ -71,6 +77,7 @@ async def make_api_request(endpoint: str, params: Optional[Dict[str, str]] = Non
                         error_msg = xml_dict["response"]["msg"]["line"]
                     raise PaloAltoApiError(f"API error: {error_msg}")
 
+                logger.debug(f"API response keys: {str(xml_dict['response'].keys())}")
                 return xml_dict["response"]
             else:
                 raise PaloAltoApiError("Invalid API response format")
@@ -102,14 +109,24 @@ async def get_address_objects(location: str = "vsys", vsys: str = "vsys1") -> Li
 
     try:
         response = await make_api_request("", params)
+        logger.debug(f"Address objects response structure: {str(response.keys())}")
 
         addresses = []
         if "result" in response:
+            # Debug the result structure
+            logger.debug(f"Result structure: {str(response['result'])[:500]}...")
+
             address_entries = response["result"].get("address", {}).get("entry", [])
+            logger.debug(f"Address entries type: {type(address_entries)}")
 
             # Handle single entry response (not in a list)
             if isinstance(address_entries, dict):
+                logger.debug(f"Single address entry: {str(address_entries)}")
                 address_entries = [address_entries]
+            elif isinstance(address_entries, list):
+                logger.debug(f"Multiple address entries: {len(address_entries)}")
+            else:
+                logger.debug(f"Unexpected address entries type: {type(address_entries)}")
 
             for entry in address_entries:
                 address = {"name": entry["@name"], "type": None, "value": None}
@@ -126,7 +143,9 @@ async def get_address_objects(location: str = "vsys", vsys: str = "vsys1") -> Li
                     address["value"] = entry["fqdn"]
 
                 addresses.append(address)
+                logger.debug(f"Processed address: {address}")
 
+        logger.debug(f"Final addresses list: {addresses}")
         return addresses
 
     except PaloAltoApiError as e:
