@@ -1,0 +1,19 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: panos-mcp-ingressroute
+  namespace: panos-mcp-service
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`mcp.cdot.io`)
+      kind: Rule
+      services:
+        - name: panos-mcp-service
+          port: 8000
+      middlewares:
+        - name: panos-mcp-service-cors
+        - name: panos-mcp-service-security-headers
+  tls:
+    secretName: panos-mcp-tls

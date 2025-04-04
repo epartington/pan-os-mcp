@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: panos-mcp-deployment
-  namespace: mcp-paloalto
+  namespace: panos-mcp-service
   labels:
     app: panos-mcp
 spec:
@@ -45,15 +45,16 @@ spec:
                 secretKeyRef:
                   name: panos-api-credentials
                   key: firewall-host
+          # Using TCP socket checks instead of HTTP for better compatibility with MCP server
           livenessProbe:
-            httpGet:
-              path: /messages/
+            tcpSocket:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 20
+            timeoutSeconds: 5
           readinessProbe:
-            httpGet:
-              path: /messages/
+            tcpSocket:
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 3
