@@ -10,8 +10,8 @@ import logging
 import os
 import traceback
 import uuid
-from typing import AsyncGenerator
 
+import anyio
 import uvicorn
 from dotenv import load_dotenv
 from mcp.server import Server
@@ -19,7 +19,7 @@ from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, StreamingResponse
+from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 from tools import register_tools
@@ -126,13 +126,6 @@ def run_server():
     sse_transport = SseServerTransport("/messages/")
     logger.debug("Created SSE transport")
 
-    # Define an empty generator for streaming response
-    async def empty_generator() -> AsyncGenerator[bytes, None]:
-        """Generate an empty byte sequence for SSE response."""
-        # This just yields once and then stops
-        yield b""
-        return
-
     # Handle SSE connection - follow the exact SDK example pattern
     async def handle_sse(request):
         """Handle SSE connection from client."""
@@ -142,25 +135,22 @@ def run_server():
         try:
             # Follow the exact pattern from the MCP SDK example
             async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
-                logger.info("SSE session established")
+                logger.info(f"SSE session established for {client}")
                 # Create initialization options
                 init_options = mcp_server.create_initialization_options()
 
                 # Run the MCP server with the streams
                 try:
                     await mcp_server.run(streams[0], streams[1], init_options)
+                except anyio.BrokenResourceError as e:
+                    # This is expected when client disconnects
+                    logger.info(f"Client {client} disconnected: {str(e)}")
                 except Exception as e:
                     logger.error(f"Error during MCP server run: {str(e)}", exc_info=True)
-
         except Exception as e:
             logger.error(f"Error establishing SSE connection: {str(e)}", exc_info=True)
         finally:
             logger.info(f"SSE connection closed for client {client}")
-
-        return StreamingResponse(
-            content=empty_generator(),
-            media_type="text/event-stream",
-        )
 
     # Wrap the message handling with additional logging
     class DebugMessageHandling:
@@ -212,7 +202,7 @@ def run_server():
             Route("/liveness", endpoint=health_check),
             # Use standard Starlette request handler that delegates to ASGI
             Route("/sse", endpoint=handle_sse),
-            Mount("/messages", app=DebugMessageHandling(sse_transport.handle_post_message)),
+            Mount("/messages/", app=DebugMessageHandling(sse_transport.handle_post_message)),
         ]
     )
 

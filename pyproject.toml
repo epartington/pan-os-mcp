@@ -6,7 +6,7 @@ authors = [
     {name = "Calvin Remsburg",email = "cremsburg@protonmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.11,<3.12"
 dependencies = [
     "fastapi (>=0.115.12,<0.116.0)",
     "uvicorn (>=0.34.0,<0.35.0)",
@@ -35,7 +35,7 @@ pytest-asyncio = "^0.26.0"
 
 [tool.ruff]
 line-length = 128
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
@@ -51,4 +51,4 @@ line-ending = "auto"
 
 [tool.black]
 line-length = 164
-target-version = ["py310"]
+target-version = ["py311"]

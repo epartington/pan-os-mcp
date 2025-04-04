@@ -35,7 +35,7 @@ The MCP SDK uses the following flow for session management:
 
 ## Solution Implementation
 
-The solution was to follow the MCP SDK's prescribed pattern exactly, with additional error handling to gracefully manage client disconnections:
+The solution was to follow the MCP SDK's prescribed pattern exactly, with robust error handling to gracefully manage client disconnections:
 
 ```python
 async def handle_sse(request):
@@ -43,33 +43,10 @@ async def handle_sse(request):
     client = f"{request.client[0]}:{request.client[1]}" if request.client else "unknown"
     logger.info(f"New MCP SSE connection from {client}")
 
-    # Set up initial response headers for SSE
-    response = StreamingResponse(
-        content=sse_stream_generator(request),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-        },
-    )
-    return response
-
-async def sse_stream_generator(request):
-    """Generate the SSE stream for the client."""
-    client = f"{request.client[0]}:{request.client[1]}" if request.client else "unknown"
-
-    # Generate a unique ID for this connection for tracking
-    connection_id = str(uuid.uuid4())
-    logger.info(f"Starting SSE stream for {client} (id: {connection_id})")
-
     try:
-        # First yield a comment to establish the connection
-        yield b": connected\n\n"
-
         # Follow the exact pattern from the MCP SDK example
         async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
-            logger.info(f"SSE session established for {client} (id: {connection_id})")
-
+            logger.info(f"SSE session established for {client}")
             # Create initialization options
             init_options = mcp_server.create_initialization_options()
 
@@ -78,43 +55,43 @@ async def sse_stream_generator(request):
                 await mcp_server.run(streams[0], streams[1], init_options)
             except anyio.BrokenResourceError as e:
                 # This is expected when client disconnects
-                logger.info(f"Client {client} (id: {connection_id}) disconnected: {str(e)}")
+                logger.info(f"Client {client} disconnected: {str(e)}")
             except Exception as e:
-                logger.error(f"Error during MCP server run for {client} (id: {connection_id}): {str(e)}", exc_info=True)
+                logger.error(f"Error during MCP server run: {str(e)}", exc_info=True)
     except Exception as e:
-        logger.error(f"Error in SSE stream for {client} (id: {connection_id}): {str(e)}", exc_info=True)
+        logger.error(f"Error establishing SSE connection: {str(e)}", exc_info=True)
     finally:
-        logger.info(f"SSE stream ended for {client} (id: {connection_id})")
+        logger.info(f"SSE connection closed for client {client}")
 ```
 
 Key changes included:
 
-1. **Using a Proper Streaming Response Pattern**:
-   - Implemented a dedicated `sse_stream_generator` coroutine
-   - Returned a properly configured `StreamingResponse` object with appropriate headers
-   - Added an initial connection message (`: connected`) to establish the connection
+1. **Following Exact SDK Pattern**:
+   - Used the SDK's connect_sse exactly as shown in their examples
+   - Let the SDK handle all aspects of the SSE connection
+   - Avoided attempting to create our own streaming response
 
 2. **Improved Exception Handling**:
-   - Added explicit handling for `BrokenResourceError` which occurs when clients disconnect
-   - Differentiated between connection issues and server runtime issues
-   - Added comprehensive logging with connection IDs for better traceability
+   - Added specific handling for `BrokenResourceError` which occurs when clients disconnect
+   - Separated connection establishment errors from server runtime errors
+   - Used a finally block to ensure proper logging of connection closure
 
-3. **Connection Lifecycle Management**:
-   - Added unique tracking IDs for each connection
-   - Implemented proper `finally` blocks to ensure cleanup regardless of how connections end
-   - Added more detailed logging throughout the connection lifecycle
+3. **Detailed Logging**:
+   - Added client information to all logs
+   - Included different log messages for different stages of the connection lifecycle
+   - Used different log levels appropriately (INFO for normal operations, ERROR for issues)
 
-## Learnings
+## Lessons Learned
 
-1. **Follow SDK Patterns**: The MCP SDK has a specific designed pattern for session management that should be followed exactly.
+1. **Strict SDK Pattern Adherence**: The MCP SDK has specific patterns for handling SSE connections and session management that must be followed exactly. Deviating from these patterns, even with seemingly better implementations, causes issues.
 
-2. **Delegate to the SDK**: Instead of implementing custom session tracking, delegate this to the SDK's built-in mechanisms.
+2. **Let the SDK Manage Sessions**: The SDK has internal mechanisms to generate, track, and validate session IDs. Do not attempt to override or supplement this with custom session management.
 
-3. **Use Proper Async Patterns**: Use `async with` context managers for stream lifecycle management.
+3. **Handle Disconnection Gracefully**: Client disconnections are normal events in SSE connections and should be handled gracefully rather than treated as errors.
 
-4. **Add Sufficient Logging**: Implement session lifecycle hooks to track session creation and termination.
+4. **Context Manager Usage**: The `connect_sse` context manager handles proper connection establishment and cleanup, and must be used with `async with`.
 
-5. **Keep Implementation Simple**: Avoid adding complexity that isn't required by the SDK design.
+5. **Error Classification**: Distinguish between normal disconnection events (`BrokenResourceError`) and actual server errors to avoid log pollution and false alarms.
 
 ## Prevention
 
