@@ -69,7 +69,7 @@ def run_server():
         Route("/readiness", endpoint=health_check),
         Route("/liveness", endpoint=health_check),
         Route("/sse", endpoint=handle_sse),
-        Mount("/messages", app=sse_transport.handle_post_message),
+        Mount("/messages/", app=sse_transport.handle_post_message),
     ]
 
     # Create the starlette app with our routes
