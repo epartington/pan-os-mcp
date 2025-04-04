@@ -40,6 +40,7 @@ items:
         - update
     - apiGroups:
         - traefik.containo.us
+        - traefik.io
       resources:
         - middlewares
         - middlewaretcps
@@ -119,7 +120,7 @@ items:
               - "--entrypoints.websecure.address=:443"
               - "--entrypoints.admin.address=:9000"
               - "--api.insecure=true"
-              - "--log.level=INFO"
+              - "--log.level=DEBUG"
             ports:
               - name: web
                 containerPort: 80

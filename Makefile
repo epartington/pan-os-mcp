@@ -1,19 +1,29 @@
-.PHONY: build run test lint format clean help test-sse isort black pre-commit pre-commit-install security-scan checkov gitleaks
+.PHONY: build run test lint format clean help test-sse isort black pre-commit pre-commit-install security-scan checkov gitleaks setup-buildx build-multi push-multi
 
 SHELL := /bin/bash
 PROJECT_NAME := panos-mcp
 DOCKER_IMAGE := ghcr.io/cdot65/$(PROJECT_NAME)
 VERSION := latest
-NAMESPACE := mcp-paloalto
+NAMESPACE := panos-mcp-service
 
 help:  ## Show help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-build:  ## Build the docker image for multi-architecture
-	docker buildx build --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE):$(VERSION) .
+setup-buildx:  ## Setup Docker buildx for multi-architecture builds
+	docker buildx create --name multiarch --use || true
+	docker buildx inspect --bootstrap
 
-push:  ## Push the docker image to the registry
-	docker buildx build --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE):$(VERSION) . --push
+build:  ## Build the docker image for amd64 architecture (even on Apple Silicon)
+	docker buildx build --platform linux/amd64 --load -t $(DOCKER_IMAGE):$(VERSION) .
+
+build-multi:  ## Build the docker image for multiple architectures
+	docker buildx build --builder multiarch --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE):$(VERSION) .
+
+push:  ## Push the docker image to the registry (amd64 only)
+	docker buildx build --platform linux/amd64 -t $(DOCKER_IMAGE):$(VERSION) . --push
+
+push-multi:  ## Push multi-architecture docker image to the registry
+	docker buildx build --builder multiarch --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE):$(VERSION) . --push
 
 run:  ## Run the MCP server locally
 	python src/main.py
