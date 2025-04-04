@@ -87,7 +87,7 @@ async def run_server():
 
     # Create the SSE transport with a specific endpoint for POST messages
     # This must be different from the GET endpoint for SSE connections
-    sse_transport = SseServerTransport("/sse-messages/")
+    sse_transport = SseServerTransport("/messages/")
     logger.debug("Created SSE transport")
 
     # Create SSE handler that connects the transport to our MCP server
@@ -107,8 +107,8 @@ async def run_server():
         Route("/liveness", endpoint=health_check, methods=["GET"]),
         # The /sse endpoint handles GET requests for SSE connections
         Route("/sse", endpoint=handle_sse, methods=["GET"]),
-        # The /sse-messages/ endpoint handles POST requests for sending messages
-        Mount("/sse-messages/", app=sse_transport.handle_post_message),
+        # The /messages/ endpoint handles POST requests for sending messages
+        Mount("/messages/", app=sse_transport.handle_post_message),
     ]
 
     logger.info(f"Configured routes: {[r.path for r in routes if hasattr(r, 'path')]}")
