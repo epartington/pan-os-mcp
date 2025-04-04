@@ -45,16 +45,19 @@ spec:
                 secretKeyRef:
                   name: panos-api-credentials
                   key: firewall-host
-          # Using TCP socket checks instead of HTTP for better compatibility with MCP server
+          # Using TCP socket health checks for the MCP server
+          # The MCP server in this container doesn't expose HTTP health endpoints
           livenessProbe:
             tcpSocket:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 20
             timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             tcpSocket:
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 3
+            failureThreshold: 2

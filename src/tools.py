@@ -47,6 +47,39 @@ SECURITY_POLICIES_TOOL_SCHEMA = {
 }
 
 
+async def list_tools() -> List[mcp.types.Tool]:
+    """List all available tools for the MCP server.
+
+    Returns:
+        List of tool definitions
+    """
+    logger.info(json.dumps({"request_id": str(uuid.uuid4()), "message": "Listing available tools"}))
+
+    return [
+        mcp.types.Tool(
+            name="retrieve_address_objects",
+            description="Retrieve address objects from a Palo Alto Networks firewall",
+            schema=ADDRESS_OBJECTS_TOOL_SCHEMA,
+            run_in_new_process=False,
+            is_user_tool=True,
+        ),
+        mcp.types.Tool(
+            name="retrieve_security_zones",
+            description="Retrieve security zones from a Palo Alto Networks firewall",
+            schema=SECURITY_ZONES_TOOL_SCHEMA,
+            run_in_new_process=False,
+            is_user_tool=True,
+        ),
+        mcp.types.Tool(
+            name="retrieve_security_policies",
+            description="Retrieve security policies from a Palo Alto Networks firewall",
+            schema=SECURITY_POLICIES_TOOL_SCHEMA,
+            run_in_new_process=False,
+            is_user_tool=True,
+        ),
+    ]
+
+
 def register_tools(server: Server) -> None:
     """Register all tools with the MCP server."""
 
@@ -198,33 +231,5 @@ def register_tools(server: Server) -> None:
             logger.error(json.dumps({"request_id": request_id, "message": f"Error retrieving security policies: {str(e)}"}))
             return TextContent(json.dumps({"error": str(e)}))
 
-
-async def list_tools() -> List[mcp.types.Tool]:
-    """List all available tools for the MCP server.
-
-    Returns:
-        List of tool definitions
-    """
-    return [
-        mcp.types.Tool(
-            name="retrieve_address_objects",
-            description="Retrieve address objects from a Palo Alto Networks firewall",
-            schema=ADDRESS_OBJECTS_TOOL_SCHEMA,
-            run_in_new_process=False,
-            is_user_tool=True,
-        ),
-        mcp.types.Tool(
-            name="retrieve_security_zones",
-            description="Retrieve security zones from a Palo Alto Networks firewall",
-            schema=SECURITY_ZONES_TOOL_SCHEMA,
-            run_in_new_process=False,
-            is_user_tool=True,
-        ),
-        mcp.types.Tool(
-            name="retrieve_security_policies",
-            description="Retrieve security policies from a Palo Alto Networks firewall",
-            schema=SECURITY_POLICIES_TOOL_SCHEMA,
-            run_in_new_process=False,
-            is_user_tool=True,
-        ),
-    ]
+    # The tools_list handler is no longer needed since we're setting server.list_tools_handler in main.py
+    # Instead, we'll use the global list_tools function directly
