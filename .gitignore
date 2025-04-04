@@ -51,3 +51,4 @@ htmlcov/
 k8s/*secret*.yaml
 *secret*.yaml
 *credential*.yaml
+cloudflare-credentials.sh

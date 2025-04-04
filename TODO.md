@@ -1,135 +1,111 @@
-# To-Do List: MCP Palo Alto Integration Server
+# MCP Palo Alto Integration Server To-Do List
 
 ## 1. Project Setup
 
-- [ ] Create a new project directory: `mcp-paloalto`
-- [ ] Initialize a Git repository in the project directory
-- [ ] Set up a virtual environment for Python 3.11
-- [ ] Create a `requirements.txt` file with dependencies:
-  - fastapi
-  - uvicorn
-  - aiohttp
-  - pydantic
-- [ ] Install dependencies using `pip install -r requirements.txt`
+- [ ] Create a new project directory named `mcp-paloalto`.
+- [ ] Initialize a Python virtual environment in the project directory.
+- [ ] Create a `requirements.txt` file with dependencies: `mcp`, `httpx`, `anyio`.
+- [ ] Install dependencies using `pip install -r requirements.txt`.
+- [ ] Set up a basic Git repository and commit initial files.
 
-## 2. Application Development
+## 2. Code Structure
 
-### 2.1 Directory Structure
+- [ ] Create a `src/` directory for source code.
+- [ ] Add `src/main.py` as the MCP server entry point.
+- [ ] Add `src/palo_alto_api.py` for Palo Alto API integration logic.
+- [ ] Add `src/tools.py` for MCP tool definitions.
+- [ ] Create a `Dockerfile` for containerizing the application.
+- [ ] Create a `kubernetes/` directory for deployment manifests.
 
-- [ ] Create `src/` directory
-- [ ] Create subdirectories: `src/models/`, `src/services/`, `src/tools/`
-- [ ] Create empty files:
-  - `src/main.py`
-  - `src/models/palo_alto.py`
-  - `src/services/palo_alto_api.py`
-  - `src/tools/palo_alto_tools.py`
+## 3. MCP Server Implementation
 
-### 2.2 FastAPI Application
+- [ ] Initialize an MCP `Server` instance in `src/main.py`.
+- [ ] Implement SSE transport support using `SseServerTransport` from the MCP SDK.
+- [ ] Set up the server to listen on `/messages/` endpoint for SSE communication.
+- [ ] Configure the server to handle tool listing and execution requests.
 
-- [ ] Implement FastAPI app initialization in `src/main.py`
-- [ ] Define MCP request model using Pydantic in `src/main.py`
-- [ ] Add `/mcp/tools` GET endpoint to return available tools
-- [ ] Add `/mcp/execute` POST endpoint to handle tool execution
-- [ ] Implement error handling for invalid tools and API failures
+## 4. Palo Alto API Integration
 
-### 2.3 Palo Alto API Integration
+- [ ] In `src/palo_alto_api.py`, create an async function to make HTTPS requests to the Palo Alto NGFW XML API.
+- [ ] Implement API key authentication for all requests.
+- [ ] Add functions to fetch address objects, security zones, and security policies from the XML API.
+- [ ] Parse XML responses and convert them to JSON-like strings for MCP `TextContent`.
 
-- [ ] Create `PaloAltoAPI` class in `src/services/palo_alto_api.py`
-- [ ] Implement async HTTP client initialization using `aiohttp`
-- [ ] Add `_make_request` helper method for API calls
-- [ ] Implement `get_address_objects` method with XML API xpath
-- [ ] Implement `get_security_zones` method with XML API xpath
-- [ ] Implement `get_security_policies` method with XML API xpath
+## 5. Tool Development
 
-### 2.4 MCP Tools Definition
+- [ ] In `src/tools.py`, define the `retrieve_address_objects` tool with parameters `location` and `vsys`.
+- [ ] Implement the tool to call the Palo Alto API and return results as `TextContent`.
+- [ ] Define the `retrieve_security_zones` tool with parameters `location` and `vsys`.
+- [ ] Implement the tool to call the Palo Alto API and return results as `TextContent`.
+- [ ] Define the `retrieve_security_policies` tool with parameters `location` and `vsys`.
+- [ ] Implement the tool to call the Palo Alto API and return results as `TextContent`.
+- [ ] Register all tools with the MCP server using the `@app.call_tool()` decorator.
+- [ ] Implement the `list_tools` handler to return tool definitions with input schemas.
 
-- [ ] Define `palo_alto_tools` list in `src/tools/palo_alto_tools.py`
-- [ ] Add tool definition for `retrieve_address_objects`
-- [ ] Add tool definition for `retrieve_security_zones`
-- [ ] Add tool definition for `retrieve_security_policies`
+## 6. Input Validation and Error Handling
 
-## 3. Containerization
+- [ ] Add parameter validation for each tool to check required fields (`location`, `vsys`).
+- [ ] Implement error handling for invalid parameters, raising appropriate exceptions.
+- [ ] Handle Palo Alto API errors (e.g., rate limits, authentication failures) and return meaningful error messages.
 
-- [ ] Create `Dockerfile` in project root
-- [ ] Configure Dockerfile to:
-  - Use `python:3.11-slim` base image
-  - Set working directory to `/app`
-  - Copy and install requirements
-  - Copy `src/` directory
-  - Run `uvicorn` on port 8000
-- [ ] Build Docker image locally to verify
+## 7. Security Implementation
 
-## 4. Kubernetes Setup
+- [ ] Configure the server to read API keys from environment variables or Kubernetes Secrets.
+- [ ] Add input sanitization to prevent injection attacks in tool parameters.
 
-### 4.1 Namespace and Base Configuration
+## 8. Containerization
 
-- [ ] Create `kubernetes/` directory
-- [ ] Create `namespace.yaml` for `mcp-paloalto` namespace
-- [ ] Create `deployment.yaml` for FastAPI application
-- [ ] Configure deployment with:
-  - 2 replicas
-  - Container port 8000
-  - Environment variables for Palo Alto hostname and API key
-  - Secret reference for API key
+- [ ] Write a `Dockerfile` to install Python 3.11 and project dependencies.
+- [ ] Configure the container to run `src/main.py` with SSE transport.
+- [ ] Build and test the Docker image locally.
 
-### 4.2 Metallb Configuration
+## 9. Kubernetes Deployment
 
-- [ ] Create `metallb-config.yaml` in `kubernetes/`
-- [ ] Define IP address pool (e.g., 192.168.1.100-192.168.1.150)
+- [ ] Create `kubernetes/deployment.yaml` with a Deployment spec for 2 replicas.
+- [ ] Define a Service to expose the MCP server within the cluster.
+- [ ] Configure Kubernetes Secrets for storing Palo Alto API keys.
+- [ ] Add liveness and readiness probes to the Deployment spec.
+- [ ] Set up a `mcp-paloalto` namespace in the manifests.
 
-### 4.3 Traefik Configuration
+## 10. Infrastructure Configuration
 
-- [ ] Create `traefik-deployment.yaml` in `kubernetes/`
-- [ ] Configure Traefik with:
-  - Port 443 exposure
-  - Kubernetes CRD provider
-  - Web entrypoint
-- [ ] Create `ingressroute.yaml` in `kubernetes/`
-- [ ] Configure IngressRoute to:
-  - Match host `mcp.paloalto.local`
-  - Route to FastAPI service on port 8000
-  - Enable TLS termination
+- [ ] Configure Metallb with an IP pool (e.g., 192.168.1.100-192.168.1.150) for Layer 2 load balancing.
+- [ ] Set up Traefik as an ingress controller with TLS termination.
+- [ ] Create an Ingress resource to route traffic to the MCP server via Traefik.
 
-## 5. Security Implementation
+## 11. Testing
 
-- [ ] Create Kubernetes Secret manifest for Palo Alto API key
-- [ ] Add input validation to FastAPI endpoints
-- [ ] Configure Traefik for TLS termination
+- [ ] Write unit tests for `palo_alto_api.py` functions using a mock API response.
+- [ ] Test each tool locally using an MCP client with SSE transport.
+- [ ] Verify tool listing returns all three tools with correct schemas.
+- [ ] Test error handling for invalid inputs and API failures.
+- [ ] Deploy to a local Kubernetes cluster (e.g., Minikube) and test end-to-end functionality.
 
-## 6. Testing
+## 12. Monitoring and Logging
 
-- [ ] Test `/mcp/tools` endpoint locally with `curl` or Postman
-- [ ] Test `/mcp/execute` endpoint with each tool and valid parameters
-- [ ] Verify error handling with invalid tool names and parameters
-- [ ] Test Docker container locally with sample API key
-- [ ] Deploy to a local Kubernetes cluster (e.g., Minikube) and verify connectivity
+- [ ] Add structured logging with request IDs to `src/main.py`.
+- [ ] Ensure logs are emitted for tool calls, API requests, and errors.
 
-## 7. Monitoring and Logging
+## 13. Documentation
 
-- [ ] Add basic logging to FastAPI application
-- [ ] Implement health check endpoint (e.g., `/health`)
-- [ ] Configure Kubernetes liveness and readiness probes in `deployment.yaml`
+- [ ] Update `README.md` with instructions to run the server using SSE transport.
+- [ ] Document example MCP client usage for calling each tool.
+- [ ] Add deployment instructions for Kubernetes, Metallb, and Traefik setup.
 
-## 8. Documentation
+## 14. Final Validation
 
-- [ ] Update README.md with:
-  - Project overview
-  - Setup instructions
-  - Deployment steps
-  - Example API calls
-- [ ] Document environment variables required
-- [ ] Add usage examples for Windsurf client
+- [ ] Verify the server handles 100 concurrent requests successfully.
+- [ ] Confirm Palo Alto API calls complete within 2 seconds under normal load.
+- [ ] Test horizontal scaling by increasing replicas and checking load balancing.
+- [ ] Validate TLS termination works through Traefik.
+- [ ] Ensure all sensitive data is stored in Kubernetes Secrets.
 
-## 9. Deployment Preparation
+## 15. Cleanup and Review
 
-- [ ] Tag Docker image for production registry
-- [ ] Push Docker image to container registry
-- [ ] Prepare Kubernetes manifests for production cluster
-- [ ] Verify Metallb and Traefik configurations match production network
+- [ ] Remove any unused code or dependencies.
+- [ ] Conduct a code review of all components.
+- [ ] Ensure all TODOs and comments are resolved or documented.
 
-## 10. Final Validation
+```
 
-- [ ] Deploy to production Kubernetes cluster
-- [ ] Verify Traefik routes traffic correctly
-- [ ] Test end-to-end functionality with Windsurf client
-- [ ] Confirm TLS termination works as expected
+```

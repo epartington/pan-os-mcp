@@ -17,7 +17,10 @@ RUN pip install --no-cache-dir poetry
 WORKDIR /app
 
 # Copy only the files needed for installing dependencies
-COPY pyproject.toml poetry.lock* ./
+COPY pyproject.toml ./
+
+# Generate a fresh poetry.lock file (without --no-update flag)
+RUN poetry lock
 
 # Install dependencies
 RUN poetry install --without dev --no-root

@@ -21,6 +21,9 @@ run:  ## Run the FastAPI server locally
 test:  ## Run tests
 	poetry run python -m pytest
 
+test-sse:  ## Run SSE endpoint tests
+	poetry run python -m pytest tests/test_sse_endpoints.py -v
+
 lint:  ## Run linting checks
 	poetry run flake8 src
 

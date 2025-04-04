@@ -4,20 +4,21 @@
 
 ### 1.1 Purpose
 
-This PRD outlines the requirements for a FastAPI-based MCP (Model Context Protocol) server that enables the Windsurf MCP client to interface with Palo Alto Networks Next-Generation Firewall (NGFW) appliances via their XML API. The application will provide tool-calling capabilities to retrieve firewall configuration data.
+This PRD outlines the requirements for an MCP (Model Context Protocol) server built using the MCP Python SDK that enables the Windsurf MCP client to interface with Palo Alto Networks Next-Generation Firewall (NGFW) appliances via their XML API. The application will provide tool-calling capabilities to retrieve firewall configuration data.
 
 ### 1.2 Scope
 
 The project includes:
 
-- A Kubernetes-deployed FastAPI application acting as an MCP server.
+- A Kubernetes-deployed MCP server using the MCP Python SDK.
 - Integration with Palo Alto NGFW XML API for specific tool functions.
 - Infrastructure setup with Metallb and Traefik for load balancing and TLS termination.
+- Support for SSE (Server-Sent Events) transport.
 
 ### 1.3 Stakeholders
 
 - **Product Owner**: [Your Name/Team]
-- **Developers**: Backend team responsible for FastAPI and Kubernetes.
+- **Developers**: Backend team responsible for MCP server implementation.
 - **DevOps**: Team managing Kubernetes, Metallb, and Traefik.
 - **End Users**: Windsurf client team interfacing with Palo Alto NGFWs.
 
@@ -34,7 +35,7 @@ The project includes:
 ### 2.1 Goals
 
 - Enable Windsurf to manage Palo Alto NGFW configurations through MCP.
-- Provide a scalable, secure, and reliable API service.
+- Provide a scalable, secure, and reliable MCP service.
 - Leverage Kubernetes for deployment and high availability.
 
 ### 2.2 Objectives
@@ -51,8 +52,8 @@ The project includes:
 
 #### 3.1.1 MCP Server
 
-- **FR1**: The FastAPI application must expose an MCP-compliant endpoint (`/mcp/tools`) to list available tools.
-- **FR2**: The application must provide an execution endpoint (`/mcp/execute`) to run specified tools with parameters.
+- **FR1**: The MCP server must implement the MCP protocol using the Python SDK.
+- **FR2**: Support SSE transport for client communication.
 - **FR3**: Support asynchronous API calls to the Palo Alto NGFW XML API.
 
 #### 3.1.2 Tools
@@ -60,15 +61,15 @@ The project includes:
 - **FR4**: `retrieve_address_objects`
   - Description: Retrieve address objects from the firewall.
   - Parameters: `location` (default: "vsys"), `vsys` (default: "vsys1").
-  - Output: List of address objects in JSON format.
+  - Output: List of address objects as MCP TextContent.
 - **FR5**: `retrieve_security_zones`
   - Description: Retrieve security zones from the firewall.
   - Parameters: `location` (default: "vsys"), `vsys` (default: "vsys1").
-  - Output: List of security zones in JSON format.
+  - Output: List of security zones as MCP TextContent.
 - **FR6**: `retrieve_security_policies`
   - Description: Retrieve security policies from the firewall.
   - Parameters: `location` (default: "vsys"), `vsys` (default: "vsys1").
-  - Output: List of security policies in JSON format.
+  - Output: List of security policies as MCP TextContent.
 
 #### 3.1.3 Palo Alto Integration
 
@@ -105,7 +106,7 @@ The project includes:
 ### 4.1 Architecture
 
 ```
-[External Client/Windsurf] --> [Traefik LB] --> [FastAPI MCP Server] --> [Palo Alto NGFW XML API]
+[External Client/Windsurf] --> [Traefik LB] --> [MCP Server] --> [Palo Alto NGFW XML API]
    |                         Kubernetes Namespace + Metallb L2 LB
    MCP Client Workflow
 ```
@@ -113,43 +114,35 @@ The project includes:
 ### 4.2 Stack
 
 - **Infrastructure**: Kubernetes, Metallb, Traefik
-- **Application**: FastAPI (Python 3.11)
-- **Dependencies**: `aiohttp` (for async HTTP requests), `pydantic` (for data validation), `uvicorn` (ASGI server)
+- **Application**: Python 3.11 with MCP Python SDK
+- **Dependencies**: `mcp`, `httpx` (for async HTTP requests), `anyio`
 
 ### 4.3 Directory Structure
 
 ```
 mcp-paloalto/
 ├── src/
-│   ├── main.py              # FastAPI application entry point
-│   ├── models/             # Data models
-│   │   └── palo_alto.py
-│   ├── services/           # Palo Alto API integration
-│   │   └── palo_alto_api.py
-│   └── tools/              # MCP tool definitions
-│       └── palo_alto_tools.py
+│   ├── main.py              # MCP server entry point
+│   ├── palo_alto_api.py     # Palo Alto API integration
+│   └── tools.py            # MCP tool definitions
 ├── Dockerfile              # Container definition
 ├── requirements.txt        # Python dependencies
 └── kubernetes/             # Deployment manifests
     └── deployment.yaml
 ```
 
-### 4.4 API Endpoints
+### 4.4 MCP Implementation
 
-- **GET /mcp/tools**
-  - Description: Returns list of available tools.
-  - Response: JSON object with tool definitions.
-- **POST /mcp/execute**
-  - Description: Executes a specified tool with parameters.
-  - Request Body: `{"tool": "tool_name", "parameters": {"key": "value"}}`
-  - Response: JSON object with results or error.
+- **Tool Listing**: Returns available tools via MCP `list_tools` handler.
+- **Tool Execution**: Executes tools via MCP `call_tool` handler.
+- **Transport**: SSE transport at `/messages/` endpoint.
 
 ### 4.5 Kubernetes Configuration
 
 - **Namespace**: `mcp-paloalto`
 - **Metallb**: IP pool (e.g., 192.168.1.100-192.168.1.150)
 - **Traefik**: Deployed as ingress controller with TLS termination
-- **Deployment**: 2 replicas of FastAPI server
+- **Deployment**: 2 replicas of MCP server
 
 ---
 
@@ -173,8 +166,8 @@ mcp-paloalto/
 
 ### 6.1 Tool Functionality
 
-- Given a valid API key and firewall hostname, when I call `/mcp/execute` with `retrieve_address_objects`, then I receive a list of address objects.
-- Given a valid request, when I call `/mcp/tools`, then I receive a JSON list of all three tools with their parameters.
+- Given a valid API key and firewall hostname, when I call the `retrieve_address_objects` tool, then I receive a list of address objects as TextContent.
+- Given a running server, when I list tools, then I receive definitions for all three tools with their parameters.
 
 ### 6.2 Deployment
 
@@ -197,16 +190,15 @@ mcp-paloalto/
 
 ### 7.2 Mitigations
 
-- **M1**: Implement rate limiting and caching in FastAPI.
+- **M1**: Implement rate limiting and caching in the MCP server.
 - **M2**: Include detailed deployment documentation and health checks.
 
 ---
 
 ## 8. Monitoring and Metrics
 
-- **M1**: Add Prometheus endpoint (`/metrics`) to FastAPI.
-- **M2**: Configure structured logging with request IDs.
-- **M3**: Set up Kubernetes liveness/readiness probes.
+- **M1**: Configure structured logging with request IDs.
+- **M2**: Set up Kubernetes liveness/readiness probes.
 
 ---
 
@@ -220,31 +212,34 @@ mcp-paloalto/
 
 ## 10. Appendix
 
-### 10.1 Example Request
+### 10.1 Example Tool Call (via MCP Client)
 
-```json
-POST /mcp/execute
-{
-  "tool": "retrieve_security_policies",
-  "parameters": {
-    "location": "vsys",
-    "vsys": "vsys1"
-  }
-}
+```python
+result = await session.call_tool(
+    "retrieve_security_policies",
+    {"location": "vsys", "vsys": "vsys1"}
+)
 ```
 
 ### 10.2 Example Response
 
-```json
-{
-  "result": [
-    {
-      "name": "rule1",
-      "source": ["any"],
-      "destination": ["any"],
-      "action": "allow"
-    }
-  ],
-  "status": "success"
-}
+```python
+[
+    TextContent(
+        type="text",
+        text='{"name": "rule1", "source": ["any"], "destination": ["any"], "action": "allow"}'
+    )
+]
 ```
+
+### Key Changes Made:
+
+1. **Framework Shift**: Replaced FastAPI-specific references with MCP Python SDK implementation details based on the provided examples from the repository.
+2. **Endpoints**: Removed FastAPI-specific endpoints (`/mcp/tools`, `/mcp/execute`) and replaced them with MCP protocol handlers (`list_tools` and `call_tool`).
+3. **Transport**: Added SSE transport support as shown in the SDK example, aligning with the server implementation.
+4. **Output Format**: Updated tool outputs to use `TextContent` from the MCP types instead of raw JSON.
+5. **Directory Structure**: Simplified to match the SDK example structure while maintaining Palo Alto-specific components.
+6. **Dependencies**: Updated to reflect MCP SDK requirements (`mcp`, `httpx`, `anyio`) instead of FastAPI-specific ones.
+7. **Examples**: Updated the appendix to show MCP client usage instead of HTTP requests.
+
+This revised PRD aligns with the MCP server implementation from the provided SDK examples while maintaining the original project's goals and requirements. Let me know if you need further adjustments!

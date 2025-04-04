@@ -34,6 +34,13 @@ spec:
       ports:
         - protocol: UDP
           port: 53
+    # Allow access specifically to the PAN-OS firewall
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.202/32  # Specific access to the firewall IP
+      ports:
+        - protocol: TCP
+          port: 443
     # Allow outbound connections to PAN-OS firewalls
     - to:
         - ipBlock:
