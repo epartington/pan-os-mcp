@@ -35,7 +35,7 @@ The MCP SDK uses the following flow for session management:
 
 ## Solution Implementation
 
-The solution was to follow the MCP SDK's prescribed pattern exactly:
+The solution was to follow the MCP SDK's prescribed pattern exactly, with additional error handling to gracefully manage client disconnections:
 
 ```python
 async def handle_sse(request):
@@ -43,36 +43,66 @@ async def handle_sse(request):
     client = f"{request.client[0]}:{request.client[1]}" if request.client else "unknown"
     logger.info(f"New MCP SSE connection from {client}")
 
-    # Follow the exact pattern from the MCP SDK example
-    async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
-        logger.info("SSE session established")
-        # Create initialization options
-        init_options = mcp_server.create_initialization_options()
-        # Run the MCP server with the streams
-        await mcp_server.run(streams[0], streams[1], init_options)
+    # Set up initial response headers for SSE
+    response = StreamingResponse(
+        content=sse_stream_generator(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
+    return response
+
+async def sse_stream_generator(request):
+    """Generate the SSE stream for the client."""
+    client = f"{request.client[0]}:{request.client[1]}" if request.client else "unknown"
+
+    # Generate a unique ID for this connection for tracking
+    connection_id = str(uuid.uuid4())
+    logger.info(f"Starting SSE stream for {client} (id: {connection_id})")
+
+    try:
+        # First yield a comment to establish the connection
+        yield b": connected\n\n"
+
+        # Follow the exact pattern from the MCP SDK example
+        async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
+            logger.info(f"SSE session established for {client} (id: {connection_id})")
+
+            # Create initialization options
+            init_options = mcp_server.create_initialization_options()
+
+            # Run the MCP server with the streams
+            try:
+                await mcp_server.run(streams[0], streams[1], init_options)
+            except anyio.BrokenResourceError as e:
+                # This is expected when client disconnects
+                logger.info(f"Client {client} (id: {connection_id}) disconnected: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error during MCP server run for {client} (id: {connection_id}): {str(e)}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error in SSE stream for {client} (id: {connection_id}): {str(e)}", exc_info=True)
+    finally:
+        logger.info(f"SSE stream ended for {client} (id: {connection_id})")
 ```
 
 Key changes included:
 
-1. **Removing Custom Session Management**:
-   - Eliminated our custom `active_sessions` dictionary
-   - Removed manual session ID generation and tracking
-   - Let the SDK handle session ID creation and tracking entirely
+1. **Using a Proper Streaming Response Pattern**:
+   - Implemented a dedicated `sse_stream_generator` coroutine
+   - Returned a properly configured `StreamingResponse` object with appropriate headers
+   - Added an initial connection message (`: connected`) to establish the connection
 
-2. **Using Correct Async Context Management**:
-   - Implemented the SSE handler using an `async with` context manager
-   - Ensured proper stream lifecycle management
-   - Let the SDK manage the association between sessions and streams
+2. **Improved Exception Handling**:
+   - Added explicit handling for `BrokenResourceError` which occurs when clients disconnect
+   - Differentiated between connection issues and server runtime issues
+   - Added comprehensive logging with connection IDs for better traceability
 
-3. **Following SDK Example Pattern**:
-   - Based our implementation on the official SDK examples
-   - Used the SDK's established patterns for handling connections
-   - Delegated session management to the SDK's built-in functionality
-
-4. **Adding Session Lifecycle Hooks**:
-   - Implemented `on_session_start` and `on_session_end` hooks
-   - Added proper logging of session events
-   - Improved visibility into session creation and termination
+3. **Connection Lifecycle Management**:
+   - Added unique tracking IDs for each connection
+   - Implemented proper `finally` blocks to ensure cleanup regardless of how connections end
+   - Added more detailed logging throughout the connection lifecycle
 
 ## Learnings
 
