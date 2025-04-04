@@ -5,8 +5,10 @@ This server provides an MCP interface to interact with Palo Alto Networks firewa
 allowing clients to retrieve address objects, security zones, and security policies.
 """
 
+import json
 import logging
 import os
+import traceback
 import uuid
 
 import uvicorn
@@ -14,6 +16,8 @@ from dotenv import load_dotenv
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
@@ -30,28 +34,89 @@ logging.basicConfig(
 logger = logging.getLogger("mcp-paloalto")
 logger.setLevel(logging.DEBUG)
 
-# Debug environment variables
-panos_api_key = os.getenv("PANOS_API_KEY")
-panos_hostname = os.getenv("PANOS_HOSTNAME")
 
-if panos_api_key:
-    masked_key = panos_api_key[:8] + "..." + panos_api_key[-8:] if len(panos_api_key) > 16 else "***masked***"
-    logger.debug(f"main.py: Loaded PANOS_API_KEY from environment: {masked_key}")
-else:
-    logger.error("main.py: Failed to load PANOS_API_KEY from environment")
+# Debug middleware to log all requests
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware to log all HTTP requests and responses."""
 
-if panos_hostname:
-    logger.debug(f"main.py: Loaded PANOS_HOSTNAME from environment: {panos_hostname}")
-else:
-    logger.error("main.py: Failed to load PANOS_HOSTNAME from environment")
+    async def dispatch(self, request: Request, call_next):
+        """Process the request and log both request and response details."""
+        request_id = str(uuid.uuid4())
+        client = request.scope.get("client", ("unknown", 0))
+        logger.debug(
+            json.dumps(
+                {
+                    "request_id": request_id,
+                    "message": "Request received",
+                    "path": request.url.path,
+                    "method": request.method,
+                    "client": f"{client[0]}:{client[1]}",
+                    "query_params": str(dict(request.query_params)),
+                }
+            )
+        )
+
+        try:
+            response = await call_next(request)
+            logger.debug(
+                json.dumps(
+                    {
+                        "request_id": request_id,
+                        "message": "Response sent",
+                        "status_code": response.status_code,
+                    }
+                )
+            )
+            return response
+        except Exception as e:
+            logger.error(
+                json.dumps(
+                    {
+                        "request_id": request_id,
+                        "message": f"Error processing request: {str(e)}",
+                        "traceback": traceback.format_exc(),
+                    }
+                )
+            )
+            raise
 
 
 def run_server():
     """
     Start the MCP server with SSE transport.
     """
-    # Initialize the MCP server
+    load_dotenv()  # Load environment variables
+
+    # Create MCP server instance
     mcp_server = Server("panos-mcp")
+
+    # Simple hooks for session lifecycle events
+    async def on_session_start(session_id, transport_info):
+        """Hook called when a new session starts."""
+        logger.info(
+            json.dumps(
+                {
+                    "message": "Session started",
+                    "session_id": session_id,
+                    "transport": transport_info,
+                }
+            )
+        )
+
+    async def on_session_end(session_id):
+        """Hook called when a session ends."""
+        logger.info(
+            json.dumps(
+                {
+                    "message": "Session ended",
+                    "session_id": session_id,
+                }
+            )
+        )
+
+    # Register session hooks with server
+    mcp_server.on_session_start = on_session_start
+    mcp_server.on_session_end = on_session_end
 
     # Register tool handlers
     register_tools(mcp_server)
@@ -60,43 +125,81 @@ def run_server():
     sse_transport = SseServerTransport("/messages/")
     logger.debug("Created SSE transport")
 
-    # Create SSE handler that connects the transport to our MCP server
+    # Handle SSE connection - follow the exact SDK example pattern
     async def handle_sse(request):
-        """Handle an SSE connection request."""
-        logger.debug(f"SSE request details: {request.url.path}, {dict(request.query_params)}")
-        client = request.scope.get("client", ("unknown", 0))
-        logger.info(f"New MCP SSE connection from {client[0]}:{client[1]}")
+        """Handle SSE connection from client."""
+        client = f"{request.client[0]}:{request.client[1]}" if request.client else "unknown"
+        logger.info(f"New MCP SSE connection from {client}")
 
-        try:
-            # This follows exactly the SDK example pattern
-            async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
-                logger.info("SSE session established")
-                await mcp_server.run(streams[0], streams[1], mcp_server.create_initialization_options())
-        except Exception as e:
-            logger.exception(f"Error in SSE handler: {str(e)}")
-            return JSONResponse({"error": "Connection error"}, status_code=500)
+        # Follow the exact pattern from the MCP SDK example
+        async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
+            logger.info("SSE session established")
+            # Create initialization options
+            init_options = mcp_server.create_initialization_options()
+            # Run the MCP server with the streams
+            await mcp_server.run(streams[0], streams[1], init_options)
+
+    # Wrap the message handling with additional logging
+    class DebugMessageHandling:
+        """Wrapper around the SSE transport message handling to add debugging."""
+
+        def __init__(self, original_app):
+            self.app = original_app
+
+        async def __call__(self, scope, receive, send):
+            """ASGI application interface with added debugging."""
+            request_id = str(uuid.uuid4())
+            path = scope.get("path", "unknown")
+            method = scope.get("method", "unknown")
+
+            logger.debug(
+                json.dumps(
+                    {
+                        "request_id": request_id,
+                        "message": "Message endpoint called",
+                        "path": path,
+                        "method": method,
+                    }
+                )
+            )
+
+            # Call the original handler
+            await self.app(scope, receive, send)
 
     # Define health check endpoint
     async def health_check(request):
         """Health check endpoint."""
+        request_id = str(uuid.uuid4())
+        logger.debug(
+            json.dumps(
+                {
+                    "request_id": request_id,
+                    "message": "Health check called",
+                }
+            )
+        )
         return JSONResponse({"status": "OK"})
 
-    # Routes for the starlette app - exact order and pattern from SDK example
-    routes = [
-        Route("/", endpoint=health_check),
-        Route("/health", endpoint=health_check),
-        Route("/readiness", endpoint=health_check),
-        Route("/liveness", endpoint=health_check),
-        Route("/sse", endpoint=handle_sse),
-        Mount("/messages/", app=sse_transport.handle_post_message),
-    ]
+    # Create Starlette application with routes
+    app = Starlette(
+        routes=[
+            Route("/", endpoint=health_check),
+            Route("/health", endpoint=health_check),
+            Route("/readiness", endpoint=health_check),
+            Route("/liveness", endpoint=health_check),
+            # Use standard Starlette request handler that delegates to ASGI
+            Route("/sse", endpoint=handle_sse),
+            Mount("/messages", app=DebugMessageHandling(sse_transport.handle_post_message)),
+        ]
+    )
 
-    # Create the starlette app with our routes
-    app = Starlette(debug=True, routes=routes)
+    # Add middleware
+    app.add_middleware(RequestLoggingMiddleware)
 
     # Log information about configured routes
-    logger.info(f"Configured routes: {[route.path for route in routes]}")
+    logger.info(f"Configured routes: {[route.path for route in app.routes]}")
     logger.info("Server configured with SSE endpoint at: /sse")
+    logger.info("Message endpoint at: /messages/")
     logger.info("Health check available at: /health")
 
     # Run the server
