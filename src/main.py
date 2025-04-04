@@ -10,6 +10,7 @@ import logging
 import os
 import traceback
 import uuid
+from typing import AsyncGenerator
 
 import uvicorn
 from dotenv import load_dotenv
@@ -18,7 +19,7 @@ from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Mount, Route
 
 from tools import register_tools
@@ -125,19 +126,41 @@ def run_server():
     sse_transport = SseServerTransport("/messages/")
     logger.debug("Created SSE transport")
 
+    # Define an empty generator for streaming response
+    async def empty_generator() -> AsyncGenerator[bytes, None]:
+        """Generate an empty byte sequence for SSE response."""
+        # This just yields once and then stops
+        yield b""
+        return
+
     # Handle SSE connection - follow the exact SDK example pattern
     async def handle_sse(request):
         """Handle SSE connection from client."""
         client = f"{request.client[0]}:{request.client[1]}" if request.client else "unknown"
         logger.info(f"New MCP SSE connection from {client}")
 
-        # Follow the exact pattern from the MCP SDK example
-        async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
-            logger.info("SSE session established")
-            # Create initialization options
-            init_options = mcp_server.create_initialization_options()
-            # Run the MCP server with the streams
-            await mcp_server.run(streams[0], streams[1], init_options)
+        try:
+            # Follow the exact pattern from the MCP SDK example
+            async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
+                logger.info("SSE session established")
+                # Create initialization options
+                init_options = mcp_server.create_initialization_options()
+
+                # Run the MCP server with the streams
+                try:
+                    await mcp_server.run(streams[0], streams[1], init_options)
+                except Exception as e:
+                    logger.error(f"Error during MCP server run: {str(e)}", exc_info=True)
+
+        except Exception as e:
+            logger.error(f"Error establishing SSE connection: {str(e)}", exc_info=True)
+        finally:
+            logger.info(f"SSE connection closed for client {client}")
+
+        return StreamingResponse(
+            content=empty_generator(),
+            media_type="text/event-stream",
+        )
 
     # Wrap the message handling with additional logging
     class DebugMessageHandling:
