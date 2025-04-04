@@ -50,5 +50,5 @@ quote-style = "double"
 line-ending = "auto"
 
 [tool.black]
-line-length = 128
+line-length = 164
 target-version = ["py310"]
