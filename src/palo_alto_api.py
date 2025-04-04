@@ -20,8 +20,8 @@ load_dotenv()
 logger = logging.getLogger("mcp-paloalto.api")
 
 # Environment variables for API configuration
-API_KEY = os.getenv("PAN_API_KEY")
-FIREWALL_HOST = os.getenv("PAN_FIREWALL_HOST")
+API_KEY = os.getenv("PANOS_API_KEY")
+FIREWALL_HOST = os.getenv("PANOS_HOSTNAME")
 
 
 class PaloAltoApiError(Exception):
