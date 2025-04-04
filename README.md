@@ -12,6 +12,9 @@ The MCP server provides a standardized interface for retrieving configuration da
 - **Python Version:** 3.11
 - **Network Communication:** async/await via `httpx` and `anyio`
 - **Transport Protocol:** Server-Sent Events (SSE)
+  - Initial connection via the `/sse` endpoint
+  - Bidirectional communication via the `/messages/` endpoint
+  - Automatic session ID generation and management via the MCP SDK
 - **Authentication:** API key-based (environment variables)
 - **Containerization:** Docker
 - **Orchestration:** Kubernetes
@@ -89,11 +92,16 @@ To connect to the server, configure your MCP client with:
 
 ## API Endpoints
 
-- `/sse` - SSE connection endpoint
-- `/messages/` - Message posting endpoint
+- `/sse` - SSE connection endpoint (establishes persistent connection with auto-generated session ID)
+- `/messages/` - Message posting endpoint (requires session ID from SSE connection)
 - `/health` - Health check endpoint
 - `/readiness` - Readiness probe endpoint
 - `/liveness` - Liveness probe endpoint
+
+The endpoints follow the MCP SDK's prescribed pattern for session management:
+1. Client establishes connection to `/sse`
+2. Server assigns a session ID and sends it via the SSE stream
+3. Client uses the session ID for all subsequent requests to `/messages/`
 
 ## Environment Variables
 

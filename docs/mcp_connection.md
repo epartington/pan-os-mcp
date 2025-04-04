@@ -94,6 +94,33 @@ The SSE connection relies on proper session tracking:
 - All requests must include this session ID
 - If session IDs are mismatched or expired, connections fail
 
+A critical aspect to understand is that **session management should be delegated to the MCP SDK** rather than implemented manually. The SDK provides a robust session management system through its `SseServerTransport` class.
+
+The proper pattern for handling sessions in an MCP server is:
+
+```python
+async def handle_sse(request):
+    async with sse_transport.connect_sse(
+        request.scope, request.receive, request._send
+    ) as streams:
+        # Create initialization options
+        init_options = mcp_server.create_initialization_options()
+        # Run the MCP server with the streams
+        await mcp_server.run(streams[0], streams[1], init_options)
+```
+
+This pattern ensures that:
+1. The SDK generates a proper session ID
+2. The session ID is sent to the client via the SSE stream
+3. The client can extract and use this ID for subsequent requests
+4. The SDK can correctly route messages to the proper session
+
+**Common Session Management Mistakes**:
+- Trying to manually generate or track session IDs
+- Not using the `async with` context manager for the SSE connection
+- Attempting to modify the initialization options with custom session data
+- Not properly passing the ASGI triplet (scope, receive, send) to the SDK
+
 ## Environment Setup Requirements
 
 For proper MCP connection:
@@ -148,3 +175,32 @@ To troubleshoot connection problems:
 5. **Examine Error Stack Traces**:
    - `BrokenResourceError` typically indicates client disconnect
    - Look at the full stack trace to see where the error occurs in the process flow
+
+## Best Practices for MCP Session Management
+
+To ensure robust session management in your MCP server:
+
+1. **Follow the SDK Example Pattern**
+   - Use the exact pattern shown in the SDK examples
+   - Let the SDK handle session ID generation and tracking
+   - Do not implement custom session tracking solutions
+
+2. **Use the Proper ASGI Pattern**
+   - In Starlette, set up a standard request handler that delegates to the SDK
+   - Pass the ASGI triplet (request.scope, request.receive, request._send) to the SDK
+   - Use the async context manager pattern for the connection
+
+3. **Error Handling**
+   - Properly handle exceptions within the SSE context manager
+   - Log connection and session-related errors with sufficient detail
+   - Implement session lifecycle hooks for debugging (on_session_start, on_session_end)
+
+4. **Path Consistency**
+   - Ensure trailing slashes are consistent between client and server configurations
+   - Use the same session parameter naming conventions as the SDK
+
+5. **Environment Configuration**
+   - Load environment variables before initializing the MCP server
+   - Ensure consistent environment between development and production
+
+By following these best practices, you can avoid the most common session management issues when implementing an MCP server.

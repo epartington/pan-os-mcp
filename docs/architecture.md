@@ -43,6 +43,42 @@ The server uses SSE transport for communication with clients, which is a standar
 - **Message Endpoint**: Clients send requests and receive responses via `/messages/`
 - **Session Management**: Each connection is assigned a unique session ID for tracking
 
+### Session Management Architecture
+
+The MCP SDK handles session management internally through the following flow:
+
+1. **Session Initialization**:
+   - When a client connects to the `/sse` endpoint, the SDK creates a new session ID (UUID)
+   - This ID is sent to the client in the initial SSE event
+   - The SDK maintains an internal mapping of session IDs to stream writers
+
+2. **Request Handling**:
+   - All client requests to `/messages/` must include the session ID as a query parameter
+   - The SDK uses this ID to route messages to the correct session
+   - If a session ID is invalid or expired, the message is rejected
+
+3. **Session Termination**:
+   - When the SSE connection closes, the SDK automatically cleans up the session
+   - Any subsequent requests with that session ID will be rejected
+
+This model follows the prescribed pattern in the MCP SDK and requires no manual session tracking in our application code.
+
+```
+┌─────────────────┐                           ┌─────────────────┐
+│  MCP Client     │                           │  MCP Server     │
+│                 │                           │                 │
+│  1. Connect SSE ├──────────────────────────►│  2. Generate    │
+│                 │                           │     Session ID  │
+│  4. Store ID    │◄──────────────────────────┤  3. Send ID     │
+│                 │                           │                 │
+│  5. Send Request│                           │                 │
+│     with ID     ├──────────────────────────►│  6. Process     │
+│                 │                           │     Request     │
+│  8. Process     │◄──────────────────────────┤  7. Send        │
+│     Response    │                           │     Response    │
+└─────────────────┘                           └─────────────────┘
+```
+
 ## Runtime Environment
 
 The server operates in an async environment using:

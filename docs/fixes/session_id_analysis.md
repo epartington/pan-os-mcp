@@ -1,3 +1,7 @@
+# DEPRECATED - See mcp_session_management_consolidated.md
+
+This document contains historical analysis that has been superseded by the consolidated fix document.
+
 # MCP Session ID Handling Analysis
 
 ## Overview
