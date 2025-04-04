@@ -83,6 +83,14 @@ async def list_tools() -> List[mcp.types.Tool]:
 def register_tools(server: Server) -> None:
     """Register all tools with the MCP server."""
 
+    # Register list_tools handler
+    @server.list_tools()
+    async def handle_list_tools():
+        """Return the list of available tools."""
+        request_id = str(uuid.uuid4())
+        logger.info(json.dumps({"request_id": request_id, "message": "Listing available tools"}))
+        return await list_tools()
+
     # Register a single call_tool handler that dispatches to different tools based on name
     @server.call_tool()
     async def handle_tool_call(name: str, params: Dict) -> List[TextContent]:
