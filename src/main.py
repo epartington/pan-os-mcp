@@ -10,6 +10,7 @@ import os
 import uuid
 
 import uvicorn
+from dotenv import load_dotenv
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
@@ -18,6 +19,9 @@ from starlette.routing import Mount, Route
 
 from tools import register_tools
 
+# Load environment variables from .env file
+load_dotenv()
+
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG if os.environ.get("DEBUG") else logging.INFO,
@@ -25,6 +29,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mcp-paloalto")
 logger.setLevel(logging.DEBUG)
+
+# Debug environment variables
+panos_api_key = os.getenv("PANOS_API_KEY")
+panos_hostname = os.getenv("PANOS_HOSTNAME")
+
+if panos_api_key:
+    masked_key = panos_api_key[:8] + "..." + panos_api_key[-8:] if len(panos_api_key) > 16 else "***masked***"
+    logger.debug(f"main.py: Loaded PANOS_API_KEY from environment: {masked_key}")
+else:
+    logger.error("main.py: Failed to load PANOS_API_KEY from environment")
+
+if panos_hostname:
+    logger.debug(f"main.py: Loaded PANOS_HOSTNAME from environment: {panos_hostname}")
+else:
+    logger.error("main.py: Failed to load PANOS_HOSTNAME from environment")
 
 
 def run_server():

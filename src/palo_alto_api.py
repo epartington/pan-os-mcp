@@ -23,6 +23,18 @@ logger = logging.getLogger("mcp-paloalto.api")
 API_KEY = os.getenv("PANOS_API_KEY")
 FIREWALL_HOST = os.getenv("PANOS_HOSTNAME")
 
+# Debug logging for environment variables
+if API_KEY:
+    masked_key = API_KEY[:8] + "..." + API_KEY[-8:] if len(API_KEY) > 16 else "***masked***"
+    logger.debug(f"Loaded API_KEY from environment: {masked_key}")
+else:
+    logger.error("Failed to load PANOS_API_KEY from environment")
+
+if FIREWALL_HOST:
+    logger.debug(f"Loaded FIREWALL_HOST from environment: {FIREWALL_HOST}")
+else:
+    logger.error("Failed to load PANOS_HOSTNAME from environment")
+
 
 class PaloAltoApiError(Exception):
     """Exception raised for Palo Alto API errors."""
@@ -45,25 +57,37 @@ async def make_api_request(endpoint: str, params: Optional[Dict[str, str]] = Non
         PaloAltoApiError: If the API call fails or returns an error
     """
     if API_KEY is None or FIREWALL_HOST is None:
+        logger.error("API key or firewall host not configured")
         raise PaloAltoApiError("API key or firewall host not configured")
 
     # Base URL for PAN-OS XML API
     base_url = f"https://{FIREWALL_HOST}/api/"
+    logger.debug(f"Making API request to: {base_url + endpoint}")
 
     # Ensure we have query parameters with the API key
     if params is None:
         params = {}
     params["key"] = API_KEY
 
+    # Log parameters (with masked API key)
+    debug_params = params.copy()
+    if "key" in debug_params:
+        debug_params["key"] = "***masked***"
+    logger.debug(f"Request parameters: {debug_params}")
+
     try:
+        logger.debug("Creating AsyncClient with SSL verification disabled and 10s timeout")
         async with httpx.AsyncClient(verify=False, timeout=10.0) as client:
+            logger.debug(f"Sending GET request to {base_url + endpoint}")
             response = await client.get(base_url + endpoint, params=params)
+            logger.debug(f"Received response with status code: {response.status_code}")
             response.raise_for_status()
 
             # Debug: Log the raw XML response
             logger.debug(f"Raw XML response: {response.text[:500]}...")
 
             # Parse XML response to dict
+            logger.debug("Parsing XML response to dictionary")
             xml_dict = xmltodict.parse(response.text)
 
             # Debug: Log the parsed dict
@@ -75,18 +99,24 @@ async def make_api_request(endpoint: str, params: Optional[Dict[str, str]] = Non
                     error_msg = "Unknown error"
                     if "msg" in xml_dict["response"]:
                         error_msg = xml_dict["response"]["msg"]["line"]
+                    logger.error(f"API returned error: {error_msg}")
                     raise PaloAltoApiError(f"API error: {error_msg}")
 
                 logger.debug(f"API response keys: {str(xml_dict['response'].keys())}")
                 return xml_dict["response"]
             else:
+                logger.error("Invalid API response format")
                 raise PaloAltoApiError("Invalid API response format")
 
     except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error: {e.response.status_code}")
+        logger.error(f"Response content: {e.response.text[:500]}")
         raise PaloAltoApiError(f"HTTP error: {e.response.status_code}")
     except httpx.RequestError as e:
+        logger.error(f"Request error: {str(e)}")
         raise PaloAltoApiError(f"Request error: {str(e)}")
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         raise PaloAltoApiError(f"Unexpected error: {str(e)}")
 
 

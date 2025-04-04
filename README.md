@@ -83,14 +83,14 @@ To connect to the server, configure your MCP client with:
 ```json
 {
   "endpoint": "http://localhost:8001/sse",
-  "messageEndpoint": "http://localhost:8001/sse-messages/"
+  "messageEndpoint": "http://localhost:8001/messages/"
 }
 ```
 
 ## API Endpoints
 
 - `/sse` - SSE connection endpoint
-- `/sse-messages/` - Message posting endpoint
+- `/messages/` - Message posting endpoint
 - `/health` - Health check endpoint
 - `/readiness` - Readiness probe endpoint
 - `/liveness` - Liveness probe endpoint

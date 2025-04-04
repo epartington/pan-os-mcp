@@ -2,57 +2,32 @@
 """Test script for PAN-OS address object retrieval."""
 
 import logging
+import os
 import sys
 import xml.etree.ElementTree as ET
 from typing import Any, Dict
 
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 
-def get_api_key(hostname: str, username: str, password: str) -> str:
-    """Get API key from username and password."""
-    logger.info(f"Getting API key for {username}@{hostname}")
-
-    params = {
-        "type": "keygen",
-        "user": username,
-        "password": password,
-    }
-
-    base_url = f"https://{hostname}/api/"
-    try:
-        response = requests.get(base_url, params=params, verify=False, timeout=10)
-        response.raise_for_status()
-
-        # Parse XML response
-        root = ET.fromstring(response.text)
-        key_elem = root.find(".//key")
-
-        if key_elem is not None and key_elem.text:
-            api_key = key_elem.text
-            logger.info(f"Successfully obtained API key: {api_key[:5]}...")
-            return api_key
-        else:
-            logger.error(f"Failed to find API key in response: {response.text}")
-            return ""
-    except Exception as e:
-        logger.error(f"Error getting API key: {str(e)}")
-        return ""
-
-
-def get_address_objects(hostname: str, api_key: str, vsys: str = "vsys1") -> Dict[str, Any]:
+def get_address_objects(hostname: str, api_key: str, location: str = "vsys", vsys: str = "vsys1") -> Dict[str, Any]:
     """Get address objects from PAN-OS firewall."""
-    logger.info(f"Retrieving address objects from {hostname} in {vsys}")
+    logger.info(f"Retrieving address objects from {hostname} in {location}/{vsys}")
 
     # Construct XPath
-    xpath = f"/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='{vsys}']/address"
+    xpath = f"/config/devices/entry[@name='localhost.localdomain']/{location}/entry[@name='{vsys}']/address"
+    logger.debug(f"Using XPath: {xpath}")
 
     # Prepare API request
     params = {
@@ -64,11 +39,17 @@ def get_address_objects(hostname: str, api_key: str, vsys: str = "vsys1") -> Dic
 
     base_url = f"https://{hostname}/api/"
     try:
-        response = requests.get(base_url, params=params, verify=False, timeout=30)
-        response.raise_for_status()
+        logger.debug(f"Making API request to {base_url} with params (key masked)")
+        debug_params = params.copy()
+        debug_params["key"] = "***MASKED***"
+        logger.debug(f"Parameters: {debug_params}")
 
-        logger.info(f"API Response status: {response.status_code}")
+        response = requests.get(base_url, params=params, verify=False, timeout=30)
+        logger.debug(f"API Response status: {response.status_code}")
+        logger.debug(f"API Response headers: {response.headers}")
         logger.debug(f"API Response content: {response.text[:500]}...")
+
+        response.raise_for_status()
 
         # Parse XML response
         root = ET.fromstring(response.text)
@@ -91,90 +72,75 @@ def get_address_objects(hostname: str, api_key: str, vsys: str = "vsys1") -> Dic
                 name = entry.get("name", "")
                 logger.info(f"Processing address entry: {name}")
 
-                addr_obj = {"name": name, "type": "unknown"}
+                addr_obj = {"name": name, "type": "unknown", "value": None}
 
                 # Determine address type and value
                 ip_netmask = entry.find("./ip-netmask")
-                if ip_netmask is not None:
+                if ip_netmask is not None and ip_netmask.text:
                     addr_obj["type"] = "ip-netmask"
                     addr_obj["value"] = ip_netmask.text
 
                 ip_range = entry.find("./ip-range")
-                if ip_range is not None:
+                if ip_range is not None and ip_range.text:
                     addr_obj["type"] = "ip-range"
                     addr_obj["value"] = ip_range.text
 
                 fqdn = entry.find("./fqdn")
-                if fqdn is not None:
+                if fqdn is not None and fqdn.text:
                     addr_obj["type"] = "fqdn"
                     addr_obj["value"] = fqdn.text
 
-                # Add description if available
-                desc_elem = entry.find("./description")
-                if desc_elem is not None:
-                    addr_obj["description"] = desc_elem.text
-
-                # Add tags if available
-                tags_elem = entry.find("./tag")
-                if tags_elem is not None:
-                    tags = []
-                    for tag in tags_elem.findall("./member"):
-                        if tag.text:
-                            tags.append(tag.text)
-                    if tags:
-                        addr_obj["tags"] = tags
-
                 address_objects.append(addr_obj)
+
+            return {"address_objects": address_objects}
         else:
             logger.warning("No address entries found in the response")
+            return {"address_objects": []}
 
-        return {"address-objects": address_objects}
-
+    except requests.exceptions.RequestException as e:
+        logger.error(f"HTTP error: {str(e)}")
+        return {"error": f"HTTP error: {str(e)}"}
+    except ET.ParseError as e:
+        logger.error(f"XML parsing error: {str(e)}")
+        return {"error": f"XML parsing error: {str(e)}"}
     except Exception as e:
-        logger.error(f"Error retrieving address objects: {str(e)}")
-        return {"error": str(e)}
+        logger.error(f"Unexpected error: {str(e)}")
+        return {"error": f"Unexpected error: {str(e)}"}
 
 
 def main():
     """Main entry point."""
-    import argparse
-    from pprint import pprint
+    # Get API key and hostname from .env file
+    api_key = os.getenv("PANOS_API_KEY")
+    hostname = os.getenv("PANOS_HOSTNAME")
 
-    import urllib3
-
-    # Disable SSL warnings
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    parser = argparse.ArgumentParser(description="Test PAN-OS API address object retrieval")
-    parser.add_argument("--hostname", required=True, help="PAN-OS firewall hostname or IP")
-    parser.add_argument("--username", required=True, help="Username for API access")
-    parser.add_argument("--password", required=True, help="Password for API access")
-    parser.add_argument("--vsys", default="vsys1", help="VSYS name (default: vsys1)")
-
-    args = parser.parse_args()
-
-    # Get API key
-    api_key = get_api_key(args.hostname, args.username, args.password)
-    if not api_key:
-        logger.error("Failed to get API key, exiting")
+    if not api_key or not hostname:
+        logger.error("API key or hostname not found in environment variables")
         sys.exit(1)
+
+    # Mask API key for logging
+    masked_key = f"{api_key[:8]}...{api_key[-8:]}" if len(api_key) > 16 else "***MASKED***"
+    logger.info(f"Using API key: {masked_key}")
+    logger.info(f"Using hostname: {hostname}")
 
     # Get address objects
-    result = get_address_objects(args.hostname, api_key, args.vsys)
+    result = get_address_objects(hostname, api_key)
 
-    # Display result
     if "error" in result:
-        logger.error(f"Error: {result['error']}")
+        logger.error(f"Failed to retrieve address objects: {result['error']}")
         sys.exit(1)
 
-    address_objects = result.get("address-objects", [])
-    logger.info(f"Found {len(address_objects)} address objects")
+    # Print address objects
+    address_objects = result.get("address_objects", [])
+    logger.info(f"Retrieved {len(address_objects)} address objects")
 
-    if address_objects:
-        print("\nAddress Objects:")
-        pprint(address_objects)
-    else:
-        print("\nNo address objects found")
+    print("\nAddress Objects:")
+    print("===============")
+    for obj in address_objects:
+        print(f"Name: {obj['name']}")
+        print(f"Type: {obj['type']}")
+        print(f"Value: {obj['value']}")
+        print("---------------")
 
 
 if __name__ == "__main__":
