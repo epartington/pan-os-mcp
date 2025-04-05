@@ -13,7 +13,7 @@ export function generateRequestId(): string {
 }
 
 // Structured logging with request ID
-export function log(message: string, data?: any, requestId?: string): void {
+export function log(message: string, data?: unknown, requestId?: string): void {
   const logEntry = {
     timestamp: new Date().toISOString(),
     request_id: requestId || 'server',
@@ -21,20 +21,24 @@ export function log(message: string, data?: any, requestId?: string): void {
     ...(data ? { data } : {}),
   };
 
-  if (config.debug) {
-    console.error(JSON.stringify(logEntry));
-  }
+  // Output log entry to stderr (this is expected behavior for this app)
+  process.stderr.write(JSON.stringify(logEntry) + '\n');
 }
 
 // Validate required environment variables
 export function validateConfig(): boolean {
   const missingVars = [];
 
-  if (!config.apiKey) missingVars.push('PALO_ALTO_API_KEY');
-  if (!config.apiUrl) missingVars.push('PALO_ALTO_API_URL');
+  if (!process.env.PALO_ALTO_API_KEY) {
+    missingVars.push('PALO_ALTO_API_KEY');
+  }
+
+  if (!process.env.PALO_ALTO_API_URL) {
+    missingVars.push('PALO_ALTO_API_URL');
+  }
 
   if (missingVars.length > 0) {
-    log(`Missing required environment variables: ${missingVars.join(', ')}`);
+    log('Missing required environment variables: ' + missingVars.join(', '));
     return false;
   }
 

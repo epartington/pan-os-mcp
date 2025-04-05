@@ -13,7 +13,7 @@ process.on('unhandledRejection', (error) => {
 });
 
 // Process command-line arguments
-const [cmd, ...args] = process.argv.slice(2);
+const [cmd, ..._args] = process.argv.slice(2);
 if (cmd === 'init') {
   // Initialize configuration
   init();

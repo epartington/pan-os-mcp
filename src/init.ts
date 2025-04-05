@@ -1,4 +1,4 @@
-import { log, config } from './utils/helpers';
+import { log } from './utils/helpers';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -9,25 +9,25 @@ import os from 'os';
  */
 export function init(): void {
   log('Initializing Palo Alto MCP server configuration...');
-  
+
   try {
     // Create a sample configuration file or update an existing one
     const configDir = path.join(os.homedir(), '.palo-alto-mcp');
     const configFile = path.join(configDir, 'config.json');
-    
+
     // Create directory if it doesn't exist
     if (!fs.existsSync(configDir)) {
       fs.mkdirSync(configDir, { recursive: true });
       log(`Created configuration directory: ${configDir}`);
     }
-    
+
     // Default configuration
     const defaultConfig = {
       apiKey: process.env.PALO_ALTO_API_KEY || '[YOUR_API_KEY]',
       apiUrl: process.env.PALO_ALTO_API_URL || 'https://[FIREWALL_IP_OR_HOSTNAME]/api',
       debug: process.env.DEBUG === 'true',
     };
-    
+
     // Write or update configuration file
     if (!fs.existsSync(configFile)) {
       fs.writeFileSync(configFile, JSON.stringify(defaultConfig, null, 2));
@@ -39,9 +39,9 @@ export function init(): void {
       fs.writeFileSync(configFile, JSON.stringify(mergedConfig, null, 2));
       log(`Updated existing configuration file: ${configFile}`);
     }
-    
+
     // Completion message with instructions
-    console.log(`
+    log(`
 ==========================================================
 Palo Alto MCP Server Initialization Complete
 ==========================================================
@@ -68,7 +68,7 @@ For more information, please refer to the README.md file.
 `);
   } catch (error) {
     log('Error during initialization:', error);
-    console.error('Failed to initialize the Palo Alto MCP server configuration.');
+    log('Failed to initialize the Palo Alto MCP server configuration.');
     process.exit(1);
   }
 }
