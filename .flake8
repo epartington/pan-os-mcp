@@ -1,4 +1,0 @@
-[flake8]
-max-line-length = 164
-exclude = .git,__pycache__,dist,build,.env,.venv,venv,*.egg-info
-extend-ignore = E203

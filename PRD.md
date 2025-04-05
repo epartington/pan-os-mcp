@@ -4,23 +4,25 @@
 
 ### 1.1 Purpose
 
-This PRD outlines the requirements for an MCP (Model Context Protocol) server built using the MCP Python SDK that enables the Windsurf MCP client to interface with Palo Alto Networks Next-Generation Firewall (NGFW) appliances via their XML API. The application will provide tool-calling capabilities to retrieve firewall configuration data.
+This PRD outlines the requirements for an MCP (Model Context Protocol) server built using TypeScript that enables the Windsurf MCP client to interface with Palo Alto Networks Next-Generation Firewall (NGFW) appliances via their XML API. The application will provide tool-calling capabilities to retrieve firewall configuration data.
 
 ### 1.2 Scope
 
 The project includes:
 
-- A Kubernetes-deployed MCP server using the MCP Python SDK.
-- Integration with Palo Alto NGFW XML API for specific tool functions.
-- Infrastructure setup with Metallb and Traefik for load balancing and TLS termination.
-- Support for SSE (Server-Sent Events) transport.
+- A TypeScript-based MCP server following the Cloudflare MCP server implementation pattern
+- An npm package for the Palo Alto MCP server that follows standard MCP patterns
+- Integration with Palo Alto NGFW XML API for specific tool functions
+- Support for the MCP command-based integration pattern used by Windsurf and other clients
+- Support for standard I/O and SSE transport mechanisms
+- Seamless installation and usage through standard npm mechanisms
 
 ### 1.3 Stakeholders
 
 - **Product Owner**: [Your Name/Team]
-- **Developers**: Backend team responsible for MCP server implementation.
-- **DevOps**: Team managing Kubernetes, Metallb, and Traefik.
-- **End Users**: Windsurf client team interfacing with Palo Alto NGFWs.
+- **Developers**: Backend team responsible for MCP server implementation
+- **MCP Integration Team**: Team responsible for npm packaging and compatibility with MCP ecosystem
+- **End Users**: Windsurf client team interfacing with Palo Alto NGFWs
 
 ### 1.4 Timeline
 
@@ -34,15 +36,20 @@ The project includes:
 
 ### 2.1 Goals
 
-- Enable Windsurf to manage Palo Alto NGFW configurations through MCP.
-- Provide a scalable, secure, and reliable MCP service.
-- Leverage Kubernetes for deployment and high availability.
+- Enable Windsurf to manage Palo Alto NGFW configurations through MCP
+- Provide a scalable, secure, and reliable MCP service
+- Create a standard npm package that follows established MCP server patterns
+- Implement the server in TypeScript following the Cloudflare MCP server architecture
+- Ensure seamless client integration through command-based execution model
 
 ### 2.2 Objectives
 
-- Implement three core tools: retrieve address objects, security zones, and security policies.
-- Ensure compatibility with the MCP workflow for tool calling.
-- Achieve 99.9% uptime with proper load balancing and TLS termination.
+- Implement three core tools: retrieve address objects, security zones, and security policies
+- Ensure compatibility with the MCP workflow for tool calling
+- Package the server as an npm module that can be installed with `npm install`
+- Enable client configuration using the standard `command`/`args` pattern used by other MCP servers
+- Simplify deployment by eliminating the need for manual server management
+- Leverage TypeScript for strong typing and code quality
 
 ---
 
@@ -50,54 +57,54 @@ The project includes:
 
 ### 3.1 Functional Requirements
 
-#### 3.1.1 MCP Server
+#### 3.1.1 MCP Server Functionality
 
-- **FR1**: The MCP server must implement the MCP protocol using the Python SDK.
-- **FR2**: Support SSE transport for client communication.
-- **FR3**: Support asynchronous API calls to the Palo Alto NGFW XML API.
+- **FR1**: Implement a TypeScript-based MCP server following the Cloudflare MCP server pattern
+- **FR2**: Support standard I/O transport for command-line integration
+- **FR3**: Implement a `list_tools` handler that returns available tools
+- **FR4**: Implement a `call_tool` handler that executes requested tools
+- **FR5**: Return tool results in appropriate MCP format (TextContent)
 
-#### 3.1.2 Tools
+#### 3.1.2 Palo Alto API Integration
 
-- **FR4**: `retrieve_address_objects`
-  - Description: Retrieve address objects from the firewall.
-  - Parameters: `location` (default: "vsys"), `vsys` (default: "vsys1").
-  - Output: List of address objects as MCP TextContent.
-- **FR5**: `retrieve_security_zones`
-  - Description: Retrieve security zones from the firewall.
-  - Parameters: `location` (default: "vsys"), `vsys` (default: "vsys1").
-  - Output: List of security zones as MCP TextContent.
-- **FR6**: `retrieve_security_policies`
-  - Description: Retrieve security policies from the firewall.
-  - Parameters: `location` (default: "vsys"), `vsys` (default: "vsys1").
-  - Output: List of security policies as MCP TextContent.
+- **FR6**: Connect to Palo Alto NGFW XML API using HTTPS
+- **FR7**: Retrieve address objects from the firewall
+- **FR8**: Retrieve security zones from the firewall
+- **FR9**: Retrieve security policies from the firewall
 
-#### 3.1.3 Palo Alto Integration
+#### 3.1.3 npm Package Features
 
-- **FR7**: Interface with the Palo Alto NGFW XML API using HTTPS.
-- **FR8**: Support API key authentication for all requests.
+- **FR10**: Create an npm package with a proper package.json
+- **FR11**: Provide a binary that can be executed via npx
+- **FR12**: Include installation and usage documentation
+- **FR13**: Accept environment variables for configuration
+- **FR14**: Follow Cloudflare MCP server project structure and patterns
 
 ### 3.2 Non-Functional Requirements
 
 #### 3.2.1 Performance
 
-- **NFR1**: Handle up to 100 concurrent requests with < 500ms response time.
-- **NFR2**: Process API calls to Palo Alto within 2 seconds under normal load.
+- **NFR1**: Process tool requests within 2 seconds (not including API latency)
+- **NFR2**: Support concurrent MCP client connections
+- **NFR3**: Minimize startup time for command-based execution
 
 #### 3.2.2 Security
 
-- **NFR3**: Terminate TLS connections at Traefik.
-- **NFR4**: Store sensitive data (API keys) in Kubernetes Secrets.
-- **NFR5**: Validate all input parameters to prevent injection attacks.
+- **NFR4**: Secure storage and transmission of API keys
+- **NFR5**: Input validation to prevent injection attacks (using Zod or similar)
+- **NFR6**: Audit logging of all operations
 
-#### 3.2.3 Scalability
+#### 3.2.3 Reliability
 
-- **NFR6**: Support horizontal scaling with Kubernetes deployments (minimum 2 replicas).
-- **NFR7**: Use Metallb for Layer 2 load balancing across pods.
+- **NFR7**: Proper error handling for API failures
+- **NFR8**: Graceful shutdown when terminated by the client
+- **NFR9**: Clear error messages for troubleshooting
 
-#### 3.2.4 Reliability
+#### 3.2.4 Usability
 
-- **NFR8**: Implement health checks for Kubernetes liveness and readiness probes.
-- **NFR9**: Achieve 99.9% uptime with proper error handling.
+- **NFR10**: Consistent installation process with other MCP npm packages
+- **NFR11**: Simple configuration in mcp_config.json
+- **NFR12**: Easy-to-understand error messages for users
 
 ---
 
@@ -106,43 +113,58 @@ The project includes:
 ### 4.1 Architecture
 
 ```
-[External Client/Windsurf] --> [Traefik LB] --> [MCP Server] --> [Palo Alto NGFW XML API]
-   |                         Kubernetes Namespace + Metallb L2 LB
-   MCP Client Workflow
+[Windsurf/MCP Client] --> [npm package: palo-alto-mcp] --> [Palo Alto NGFW XML API]
+                      |
+                MCP command-based execution
+                (command/args pattern)
 ```
 
 ### 4.2 Stack
 
-- **Infrastructure**: Kubernetes, Metallb, Traefik
-- **Application**: Python 3.11 with MCP Python SDK
-- **Dependencies**: `mcp`, `httpx` (for async HTTP requests), `anyio`
+- **Language**: TypeScript
+- **MCP SDK**: @modelcontextprotocol/sdk
+- **HTTP Client**: undici or node-fetch for API requests
+- **Schema Validation**: Zod
+- **Packaging**: npm
+- **Development**: TSConfig, ESLint, Prettier
 
 ### 4.3 Directory Structure
 
+Following the Cloudflare MCP server structure:
+
 ```
-mcp-paloalto/
+palo-alto-mcp/
 ├── src/
-│   ├── main.py              # MCP server entry point
-│   ├── palo_alto_api.py     # Palo Alto API integration
-│   └── tools.py            # MCP tool definitions
-├── Dockerfile              # Container definition
-├── requirements.txt        # Python dependencies
-└── kubernetes/             # Deployment manifests
-    └── deployment.yaml
+│   ├── index.ts              # Command-line entry point
+│   ├── main.ts               # Main MCP server implementation
+│   ├── init.ts               # Initialization and setup
+│   ├── tools/                # Tool definitions
+│   │   ├── address-objects.ts
+│   │   ├── security-zones.ts
+│   │   └── security-policies.ts
+│   └── utils/                # Utilities
+│       ├── helpers.ts        # Common utility functions
+│       └── pan-os-api.ts     # API client for Palo Alto
+├── tests/                    # Unit and integration tests
+├── package.json              # npm package definition
+├── tsconfig.json             # TypeScript configuration
+└── README.md                 # Documentation
 ```
 
 ### 4.4 MCP Implementation
 
-- **Tool Listing**: Returns available tools via MCP `list_tools` handler.
-- **Tool Execution**: Executes tools via MCP `call_tool` handler.
-- **Transport**: SSE transport at `/messages/` endpoint.
+- **Tool Listing**: Returns available tools via MCP `list_tools` handler
+- **Tool Execution**: Executes tools via MCP `call_tool` handler
+- **Transport**: Standard I/O transport for command-line execution
+- **Client Integration**: Command-based execution via npm package
 
-### 4.5 Kubernetes Configuration
+### 4.5 npm Package Configuration
 
-- **Namespace**: `mcp-paloalto`
-- **Metallb**: IP pool (e.g., 192.168.1.100-192.168.1.150)
-- **Traefik**: Deployed as ingress controller with TLS termination
-- **Deployment**: 2 replicas of MCP server
+- **Package Name**: `palo-alto-mcp` or similar
+- **Command**: Callable via `npx -y palo-alto-mcp`
+- **Arguments**: Support for API URL, debug flags, etc.
+- **Environment Variables**: Configure API credentials and other settings
+- **Version Management**: Semantic versioning following npm standards
 
 ---
 
@@ -150,15 +172,19 @@ mcp-paloalto/
 
 ### 5.1 As a Windsurf Developer
 
-- **US1**: I want to retrieve a list of available tools so I can integrate them into my MCP workflow.
-- **US2**: I want to execute a tool to fetch address objects so I can manage IP mappings.
-- **US3**: I want to retrieve security zones so I can configure network segmentation.
-- **US4**: I want to access security policies so I can audit firewall rules.
+- **US1**: I want to retrieve a list of available tools so I can integrate them into my MCP workflow
+- **US2**: I want to execute a tool to fetch address objects so I can manage IP mappings
+- **US3**: I want to retrieve security zones so I can configure network segmentation
+- **US4**: I want to access security policies so I can audit firewall rules
+- **US5**: I want to install the MCP server via npm so I don't need to manage dependencies
+- **US6**: I want to configure the server in mcp_config.json using the command/args pattern like other MCP servers
 
-### 5.2 As a DevOps Engineer
+### 5.2 As an MCP Integration Engineer
 
-- **US5**: I want to deploy the application in Kubernetes so it’s scalable and reliable.
-- **US6**: I want TLS termination at Traefik so communication is secure.
+- **US7**: I want to develop the server in TypeScript following the Cloudflare MCP server pattern
+- **US8**: I want to handle environment variables securely for API credentials
+- **US9**: I want to provide clear documentation for installation and configuration
+- **US10**: I want to use strong typing for all API responses and requests
 
 ---
 
@@ -166,18 +192,29 @@ mcp-paloalto/
 
 ### 6.1 Tool Functionality
 
-- Given a valid API key and firewall hostname, when I call the `retrieve_address_objects` tool, then I receive a list of address objects as TextContent.
-- Given a running server, when I list tools, then I receive definitions for all three tools with their parameters.
+- Given a valid API key and firewall hostname, when I call the `retrieve_address_objects` tool, then I receive a list of address objects in the proper format
+- Given a running server, when I list tools, then I receive definitions for all three tools with their parameters
 
-### 6.2 Deployment
+### 6.2 npm Package
 
-- Given the Kubernetes manifests, when I deploy the application, then it runs with 2 replicas and is accessible via Traefik.
-- Given a Metallb configuration, when traffic is sent to the service, then it is load-balanced across pods.
+- Given an npm installation, when I run `npm install -g palo-alto-mcp`, then the package installs successfully
+- Given a proper Windsurf configuration, when the MCP client launches the server, then the server starts correctly
+- Given environment variables with API credentials, when the server starts, then it connects to the Palo Alto firewall
 
-### 6.3 Security
+### 6.3 Integration
 
-- Given sensitive credentials, when I deploy the app, then they are stored in Kubernetes Secrets.
-- Given an invalid parameter, when I make a request, then I receive a validation error.
+- Given a standard MCP client, when I configure it with the command/args pattern, then it can successfully interact with the server
+- Given a successful tool execution, when the response is ready, then it's properly returned to the client
+
+### 6.4 TypeScript Implementation
+
+- Given the Cloudflare MCP server model, when I implement the server, then it follows the same patterns and structure
+- Given TypeScript's type system, when I develop the API client, then it has proper type definitions for all Palo Alto API responses
+
+### 6.5 Security
+
+- Given sensitive credentials, when I configure them via environment variables, then they are securely accessed by the server
+- Given an invalid parameter, when I make a request, then I receive a validation error with proper typing
 
 ---
 
@@ -185,61 +222,69 @@ mcp-paloalto/
 
 ### 7.1 Risks
 
-- **R1**: Palo Alto API rate limits could impact performance.
-- **R2**: Misconfiguration of Traefik or Metallb could cause downtime.
+- **R1**: Palo Alto API rate limits could impact performance
+- **R2**: TypeScript to Palo Alto XML API integration might be complex
+- **R3**: Different npm environments might cause inconsistent behavior
 
 ### 7.2 Mitigations
 
-- **M1**: Implement rate limiting and caching in the MCP server.
-- **M2**: Include detailed deployment documentation and health checks.
+- **M1**: Implement rate limiting and caching in the MCP server
+- **M2**: Use robust XML parsing libraries with strong TypeScript typings
+- **M3**: Thoroughly test in various npm environments and document requirements
 
 ---
 
 ## 8. Monitoring and Metrics
 
-- **M1**: Configure structured logging with request IDs.
-- **M2**: Set up Kubernetes liveness/readiness probes.
+- **M1**: Configure structured logging with request IDs
+- **M2**: Include verbose debug mode for troubleshooting
+- **M3**: Log npm package usage statistics
 
 ---
 
-## 9. Future Considerations
+## 9. Implementation Plan
 
-- Add support for additional Palo Alto API endpoints (e.g., NAT policies).
-- Implement authentication middleware for API access control.
-- Support multiple firewall instances via configuration.
+### 9.1 Phase 1: Project Setup and API Integration (1 week)
+
+- Set up TypeScript project following Cloudflare MCP server structure
+- Create basic XML API client for Palo Alto integration
+- Implement authentication mechanisms
+
+### 9.2 Phase 2: MCP Server Implementation (2 weeks)
+
+- Implement main server with list_tools and call_tool handlers
+- Create tool definitions and handlers for address objects, security zones, and policies
+- Set up standard I/O transport
+
+### 9.3 Phase 3: Testing and Documentation (1 week)
+
+- Create comprehensive tests for all components
+- Test with Windsurf and other MCP clients
+- Document installation and usage
+- Create README and examples
+
+### 9.4 Phase 4: Release (1 week)
+
+- Publish to npm registry
+- Create release announcements
+- Gather feedback for improvements
 
 ---
 
-## 10. Appendix
+## 10. Success Metrics
 
-### 10.1 Example Tool Call (via MCP Client)
+- **S1**: Successfully installs via npm in under 30 seconds
+- **S2**: Tool execution completes within 5 seconds for most queries
+- **S3**: Zero compatibility issues with standard MCP clients like Windsurf
+- **S4**: Positive feedback from Windsurf developers
+- **S5**: Code maintainability measured by TypeScript strict mode compliance
 
-```python
-result = await session.call_tool(
-    "retrieve_security_policies",
-    {"location": "vsys", "vsys": "vsys1"}
-)
-```
+---
 
-### 10.2 Example Response
+## 11. Future Enhancements
 
-```python
-[
-    TextContent(
-        type="text",
-        text='{"name": "rule1", "source": ["any"], "destination": ["any"], "action": "allow"}'
-    )
-]
-```
-
-### Key Changes Made:
-
-1. **Framework Shift**: Replaced FastAPI-specific references with MCP Python SDK implementation details based on the provided examples from the repository.
-2. **Endpoints**: Removed FastAPI-specific endpoints (`/mcp/tools`, `/mcp/execute`) and replaced them with MCP protocol handlers (`list_tools` and `call_tool`).
-3. **Transport**: Added SSE transport support as shown in the SDK example, aligning with the server implementation.
-4. **Output Format**: Updated tool outputs to use `TextContent` from the MCP types instead of raw JSON.
-5. **Directory Structure**: Simplified to match the SDK example structure while maintaining Palo Alto-specific components.
-6. **Dependencies**: Updated to reflect MCP SDK requirements (`mcp`, `httpx`, `anyio`) instead of FastAPI-specific ones.
-7. **Examples**: Updated the appendix to show MCP client usage instead of HTTP requests.
-
-This revised PRD aligns with the MCP server implementation from the provided SDK examples while maintaining the original project's goals and requirements. Let me know if you need further adjustments!
+- **E1**: Support for additional Palo Alto API endpoints
+- **E2**: Caching layer for frequently requested data
+- **E3**: Ability to modify (not just retrieve) firewall configurations
+- **E4**: Support for multiple concurrent firewall connections
+- **E5**: Interactive CLI mode for testing outside of MCP clients

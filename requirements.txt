@@ -1,7 +1,0 @@
-mcp
-httpx
-anyio
-xmltodict
-python-dotenv
-starlette
-uvicorn
