@@ -1,111 +1,132 @@
-# MCP Palo Alto Integration Server To-Do List
+# TODO.md: MCP Palo Alto Integration Server
 
-## 1. Project Setup
+This TODO list outlines the tasks required to develop the MCP Palo Alto Integration Server as specified in the Product Requirements Document (PRD). Tasks are grouped by implementation phases and key areas of focus.
 
-- [ ] Create a new project directory named `mcp-paloalto`.
-- [ ] Initialize a Python virtual environment in the project directory.
-- [ ] Create a `requirements.txt` file with dependencies: `mcp`, `httpx`, `anyio`.
-- [ ] Install dependencies using `pip install -r requirements.txt`.
-- [ ] Set up a basic Git repository and commit initial files.
+---
 
-## 2. Code Structure
+## Phase 1: Project Setup and API Integration (April 10 - April 17, 2025)
 
-- [ ] Create a `src/` directory for source code.
-- [ ] Add `src/main.py` as the MCP server entry point.
-- [ ] Add `src/palo_alto_api.py` for Palo Alto API integration logic.
-- [ ] Add `src/tools.py` for MCP tool definitions.
-- [ ] Create a `Dockerfile` for containerizing the application.
-- [ ] Create a `kubernetes/` directory for deployment manifests.
+- [ ] **Project Initialization**
 
-## 3. MCP Server Implementation
+  - [ ] Set up TypeScript project with `tsconfig.json` using strict mode
+  - [ ] Configure ESLint and Prettier for code quality
+  - [ ] Create directory structure as per PRD (src/, tests/, etc.)
+  - [ ] Initialize `package.json` with necessary dependencies (`@modelcontextprotocol/sdk`, `undici` or `node-fetch`, `zod`)
+  - [ ] Add initial `README.md` with project overview
 
-- [ ] Initialize an MCP `Server` instance in `src/main.py`.
-- [ ] Implement SSE transport support using `SseServerTransport` from the MCP SDK.
-- [ ] Set up the server to listen on `/messages/` endpoint for SSE communication.
-- [ ] Configure the server to handle tool listing and execution requests.
+- [ ] **Palo Alto API Client**
+  - [ ] Implement `pan-os-api.ts` with HTTPS connection to Palo Alto NGFW XML API
+  - [ ] Add authentication mechanism using API keys via environment variables
+  - [ ] Define TypeScript interfaces for API responses (address objects, security zones, security policies)
+  - [ ] Test basic API connectivity with a sample firewall
 
-## 4. Palo Alto API Integration
+---
 
-- [ ] In `src/palo_alto_api.py`, create an async function to make HTTPS requests to the Palo Alto NGFW XML API.
-- [ ] Implement API key authentication for all requests.
-- [ ] Add functions to fetch address objects, security zones, and security policies from the XML API.
-- [ ] Parse XML responses and convert them to JSON-like strings for MCP `TextContent`.
+## Phase 2: MCP Server Implementation (April 18 - May 1, 2025)
 
-## 5. Tool Development
+- [ ] **Core MCP Server**
 
-- [ ] In `src/tools.py`, define the `retrieve_address_objects` tool with parameters `location` and `vsys`.
-- [ ] Implement the tool to call the Palo Alto API and return results as `TextContent`.
-- [ ] Define the `retrieve_security_zones` tool with parameters `location` and `vsys`.
-- [ ] Implement the tool to call the Palo Alto API and return results as `TextContent`.
-- [ ] Define the `retrieve_security_policies` tool with parameters `location` and `vsys`.
-- [ ] Implement the tool to call the Palo Alto API and return results as `TextContent`.
-- [ ] Register all tools with the MCP server using the `@app.call_tool()` decorator.
-- [ ] Implement the `list_tools` handler to return tool definitions with input schemas.
+  - [ ] Implement `main.ts` with MCP server logic following Cloudflare MCP pattern
+  - [ ] Add `list_tools` handler to return available tools (address objects, security zones, security policies)
+  - [ ] Add `call_tool` handler to execute requested tools
+  - [ ] Set up standard I/O transport for command-line execution
+  - [ ] Ensure server supports `command`/`args` pattern for client integration
 
-## 6. Input Validation and Error Handling
+- [ ] **Tool Definitions**
 
-- [ ] Add parameter validation for each tool to check required fields (`location`, `vsys`).
-- [ ] Implement error handling for invalid parameters, raising appropriate exceptions.
-- [ ] Handle Palo Alto API errors (e.g., rate limits, authentication failures) and return meaningful error messages.
+  - [ ] Create `address-objects.ts` to retrieve address objects from Palo Alto API
+  - [ ] Create `security-zones.ts` to retrieve security zones from Palo Alto API
+  - [ ] Create `security-policies.ts` to retrieve security policies from Palo Alto API
+  - [ ] Format tool outputs as `TextContent` per MCP standards
 
-## 7. Security Implementation
+- [ ] **Utilities**
 
-- [ ] Configure the server to read API keys from environment variables or Kubernetes Secrets.
-- [ ] Add input sanitization to prevent injection attacks in tool parameters.
+  - [ ] Implement `helpers.ts` with common utility functions (e.g., error handling, logging)
+  - [ ] Add input validation using Zod in `call_tool` handler
+  - [ ] Set up audit logging for all operations
 
-## 8. Containerization
+- [ ] **Configuration**
+  - [ ] Enable environment variable support for API credentials and settings
+  - [ ] Support `mcp_config.json` for client configuration
 
-- [ ] Write a `Dockerfile` to install Python 3.11 and project dependencies.
-- [ ] Configure the container to run `src/main.py` with SSE transport.
-- [ ] Build and test the Docker image locally.
+---
 
-## 9. Kubernetes Deployment
+## Phase 3: Testing and Documentation (May 2 - May 8, 2025)
 
-- [ ] Create `kubernetes/deployment.yaml` with a Deployment spec for 2 replicas.
-- [ ] Define a Service to expose the MCP server within the cluster.
-- [ ] Configure Kubernetes Secrets for storing Palo Alto API keys.
-- [ ] Add liveness and readiness probes to the Deployment spec.
-- [ ] Set up a `mcp-paloalto` namespace in the manifests.
+- [ ] **Testing**
 
-## 10. Infrastructure Configuration
+  - [ ] Write unit tests for `pan-os-api.ts` (API connectivity, response parsing)
+  - [ ] Write integration tests for `list_tools` and `call_tool` handlers
+  - [ ] Test tool execution with Windsurf client
+  - [ ] Verify concurrent client connection support
+  - [ ] Test error handling for API failures and invalid inputs
 
-- [ ] Configure Metallb with an IP pool (e.g., 192.168.1.100-192.168.1.150) for Layer 2 load balancing.
-- [ ] Set up Traefik as an ingress controller with TLS termination.
-- [ ] Create an Ingress resource to route traffic to the MCP server via Traefik.
+- [ ] **Documentation**
+  - [ ] Update `README.md` with installation instructions (`npm install -g palo-alto-mcp`)
+  - [ ] Add usage examples for running via `npx -y palo-alto-mcp`
+  - [ ] Document environment variables (e.g., API URL, credentials)
+  - [ ] Include troubleshooting section with common error messages
 
-## 11. Testing
+---
 
-- [ ] Write unit tests for `palo_alto_api.py` functions using a mock API response.
-- [ ] Test each tool locally using an MCP client with SSE transport.
-- [ ] Verify tool listing returns all three tools with correct schemas.
-- [ ] Test error handling for invalid inputs and API failures.
-- [ ] Deploy to a local Kubernetes cluster (e.g., Minikube) and test end-to-end functionality.
+## Phase 4: Release (May 9 - May 15, 2025)
 
-## 12. Monitoring and Logging
+- [ ] **npm Packaging**
 
-- [ ] Add structured logging with request IDs to `src/main.py`.
-- [ ] Ensure logs are emitted for tool calls, API requests, and errors.
+  - [ ] Finalize `package.json` with binary entry point (`palo-alto-mcp`)
+  - [ ] Test local installation (`npm install`) and global installation (`npm install -g`)
+  - [ ] Publish package to npm registry
+  - [ ] Verify `npx -y palo-alto-mcp` works as expected
 
-## 13. Documentation
+- [ ] **Release Activities**
+  - [ ] Draft release announcement for stakeholders
+  - [ ] Tag MVP release (v0.1.0) in version control
+  - [ ] Collect initial feedback from Windsurf team
 
-- [ ] Update `README.md` with instructions to run the server using SSE transport.
-- [ ] Document example MCP client usage for calling each tool.
-- [ ] Add deployment instructions for Kubernetes, Metallb, and Traefik setup.
+---
 
-## 14. Final Validation
+## Additional Requirements
 
-- [ ] Verify the server handles 100 concurrent requests successfully.
-- [ ] Confirm Palo Alto API calls complete within 2 seconds under normal load.
-- [ ] Test horizontal scaling by increasing replicas and checking load balancing.
-- [ ] Validate TLS termination works through Traefik.
-- [ ] Ensure all sensitive data is stored in Kubernetes Secrets.
+- [ ] **Performance**
 
-## 15. Cleanup and Review
+  - [ ] Ensure tool requests process within 2 seconds (excluding API latency)
+  - [ ] Optimize startup time for command-based execution
 
-- [ ] Remove any unused code or dependencies.
-- [ ] Conduct a code review of all components.
-- [ ] Ensure all TODOs and comments are resolved or documented.
+- [ ] **Security**
 
-```
+  - [ ] Securely store and access API keys via environment variables
+  - [ ] Implement input validation to prevent injection attacks
+  - [ ] Add graceful shutdown on client termination
 
-```
+- [ ] **Reliability**
+
+  - [ ] Handle API failures with clear error messages
+  - [ ] Test server resilience with intermittent network issues
+
+- [ ] **Monitoring**
+  - [ ] Add structured logging with request IDs
+  - [ ] Implement verbose debug mode toggle
+
+---
+
+## Post-MVP Tasks (May 16 - June 1, 2025)
+
+- [ ] Finalize full release (v1.0.0) with all feedback addressed
+- [ ] Test in multiple npm environments to ensure consistency
+- [ ] Add caching mechanism for frequently requested data
+- [ ] Document future enhancement ideas (e.g., additional API endpoints, CLI mode)
+
+---
+
+## Milestones
+
+- [ ] **MVP Release**: May 15, 2025
+- [ ] **Full Release**: June 1, 2025
+
+---
+
+## Notes
+
+- Start date: April 10, 2025
+- Refer to PRD for detailed acceptance criteria and user stories
+- Regularly sync with Windsurf team for integration testing

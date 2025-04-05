@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: panos-mcp-service
-  labels:
-    name: panos-mcp-service
