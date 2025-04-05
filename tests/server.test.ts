@@ -1,8 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 // Save the original process.exit
 const originalProcessExit = process.exit;
+
+// Mock the modules
+vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => {
+  return {
+    McpServer: vi.fn().mockImplementation(() => ({
+      tool: vi.fn(),
+      connect: vi.fn().mockResolvedValue(undefined),
+      serve: vi.fn().mockResolvedValue(undefined),
+    })),
+  };
+});
+
+vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => {
+  return {
+    StdioServerTransport: vi.fn().mockImplementation(() => ({})),
+  };
+});
 
 // Set up and restore mocks
 beforeEach(() => {
@@ -33,6 +51,30 @@ vi.mock('../src/utils/helpers', () => ({
   }),
 }));
 
+// Mock the PanOsSdkClient class
+vi.mock('../src/utils/pan-os-sdk-client', () => ({
+  PanOsSdkClient: vi.fn().mockImplementation(() => ({
+    getAddressObjects: vi.fn().mockResolvedValue([
+      { name: 'test-address', type: 'ip-netmask', value: '192.168.1.1/24' }
+    ]),
+    getSecurityZones: vi.fn().mockResolvedValue([
+      { name: 'trust', mode: 'layer3' }
+    ]),
+    getSecurityPolicies: vi.fn().mockResolvedValue([
+      { 
+        name: 'allow-out', 
+        fromZones: ['trust'], 
+        toZones: ['untrust'],
+        sourceAddresses: ['any'],
+        destinationAddresses: ['any'],
+        applications: ['web-browsing'],
+        services: ['application-default'],
+        action: 'allow'
+      }
+    ]),
+  })),
+}));
+
 // Import main after setting up mocks
 import { main } from '../src/main';
 import { validateConfig } from '../src/utils/helpers';
@@ -46,6 +88,15 @@ describe('Palo Alto MCP Server', () => {
     
     // Process.exit should not be called on success
     expect(process.exit).not.toHaveBeenCalled();
+    
+    // Verify McpServer was initialized correctly
+    expect(McpServer).toHaveBeenCalledWith({
+      name: 'palo-alto-mcp',
+      version: '0.1.0',
+    });
+    
+    // Verify StdioServerTransport was created
+    expect(StdioServerTransport).toHaveBeenCalled();
   });
   
   it('should exit with error when API key is missing', async () => {
