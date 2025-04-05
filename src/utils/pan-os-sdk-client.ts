@@ -82,7 +82,7 @@ export class PanOsSdkClient {
 
       // Use the SDK to get address objects via XPath query
       const xpath = AddressObject.getXpath().replace('vsys1', vsys);
-      const response = await this.firewall.getConfig(xpath) as ApiResponse;
+      const response = (await this.firewall.getConfig(xpath)) as ApiResponse;
 
       // Check if we have valid entries
       if (response && response.result && response.result.entry) {
@@ -115,7 +115,7 @@ export class PanOsSdkClient {
     const name = entry.$?.name || '';
     const type = this.getAddressObjectType(entry);
     const tags = entry.tag?.[0]?.member?.map((m) => m) || [];
-    
+
     // Extract value based on the type
     let value = '';
     if (type && entry[type] && Array.isArray(entry[type])) {
@@ -129,7 +129,7 @@ export class PanOsSdkClient {
     const addressEntry = {
       name,
       description: entry.description?.[0],
-      tag: tags
+      tag: tags,
     } as AddressObjectEntry;
 
     // Add the type-specific property in a type-safe manner
