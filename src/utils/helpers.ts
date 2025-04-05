@@ -5,6 +5,7 @@ export const config = {
   apiKey: process.env.PALO_ALTO_API_KEY || '',
   apiUrl: process.env.PALO_ALTO_API_URL || '',
   debug: process.env.DEBUG === 'true',
+  devMode: process.env.DEV_MODE === 'true',
 };
 
 // Generate a unique request ID for logging
@@ -27,6 +28,12 @@ export function log(message: string, data?: unknown, requestId?: string): void {
 
 // Validate required environment variables
 export function validateConfig(): boolean {
+  // If in dev mode, don't require API credentials
+  if (config.devMode) {
+    log('Running in development mode - API credentials not required');
+    return true;
+  }
+
   const missingVars = [];
 
   if (!process.env.PALO_ALTO_API_KEY) {
