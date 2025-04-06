@@ -1,61 +1,112 @@
----
 site_name: Palo Alto Networks MCP Server
-site_url: https://github.com/cdot65/pan-os-mcp
+site_description: Documentation for the Palo Alto Networks MCP Server
+site_url: https://cdot65.github.io/pan-os-mcp
+site_author: Calvin Remsburg
+copyright: Copyright &copy; 2025 Palo Alto Networks
+
+repo_name: cdot65/pan-os-mcp
 repo_url: https://github.com/cdot65/pan-os-mcp
-repo_name: GitHub
+edit_uri: edit/main/docs/
 
 theme:
   name: material
-  palette:
-    primary: blue
-    accent: light blue
+  logo: images/logo.svg
+  favicon: images/logo.svg
   features:
+    - navigation.instant
     - navigation.tabs
     - navigation.sections
-    - toc.integrate
-    - search.suggest
-    - search.highlight
-    - content.tabs.link
-    - content.code.annotation
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
     - content.code.copy
+    - content.code.annotate
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
 
 nav:
   - Home: index.md
   - User Guide:
       - Installation: guide/installation.md
       - Configuration: guide/configuration.md
-      - Basic Usage: guide/usage.md
+      - Usage: guide/usage.md
   - Architecture: architecture.md
   - Module Documentation:
       - Server: modules/server.md
       - PAN-OS API Client: modules/pan_os_api.md
       - Configuration: modules/config.md
-  - Testing Strategy: testing.md
-  - Contributing: contributing.md
+  - Development:
+      - Contributing: contributing.md
+      - Testing Strategy: testing.md
+  - Examples:
+      - Mermaid Diagrams: examples/mermaid.md
+
+# Explicitly set the layout for home page with customizations
+not_in_nav: |
+  index.md
+  STYLE_GUIDE.md
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
+  - admonition
+  - pymdownx.details
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: pymdownx.superfences.fence_code_format
-  - pymdownx.inlinehilite
-  - admonition
-  - pymdownx.details
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - tables
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji
+  - footnotes
   - toc:
       permalink: true
+      toc_depth: 4
+  - attr_list
+  - def_list
+  - tables
+  - md_in_html
+
+extra_css:
+  - css/termynal.css
+  - css/custom.css
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10.6.1/dist/mermaid.min.js
+  - js/mermaid-init.js
+  - js/termynal.js
+  - js/custom_termynal.js
 
 plugins:
   - search
-  # Uncomment if mkdocstrings is desired
-  # - mkdocstrings:
-  #     handlers:
-  #       python:
-  #         options:
-  #           show_root_heading: yes
-  #           show_source: no
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+          selection:
+            docstring_style: google
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      enable_git_follow: false
+      fallback_to_build_date: true
