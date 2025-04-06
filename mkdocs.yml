@@ -1,0 +1,60 @@
+site_name: Palo Alto Networks MCP Server
+site_url: https://github.com/cdot65/pan-os-mcp
+repo_url: https://github.com/cdot65/pan-os-mcp
+repo_name: GitHub
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: light blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - Installation: guide/installation.md
+    - Configuration: guide/configuration.md
+    - Basic Usage: guide/usage.md
+  - Architecture: architecture.md
+  - Module Documentation:
+    - Server: modules/server.md
+    - PAN-OS API Client: modules/pan_os_api.md
+    - Configuration: modules/config.md
+  - Testing Strategy: testing.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  # Uncomment if mkdocstrings is desired
+  # - mkdocstrings:
+  #     handlers:
+  #       python:
+  #         options:
+  #           show_root_heading: yes
+  #           show_source: no
