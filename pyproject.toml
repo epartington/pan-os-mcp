@@ -44,6 +44,14 @@ include = ["src"]
 typeCheckingMode = "basic"
 reportMissingImports = true
 reportMissingTypeStubs = false
+stubPath = "typings"
+extraPaths = []
+
+# Ignore specific imports that are external dependencies
+[[tool.pyright.ignore]]
+# Ignore missing imports from mcp modules
+descriptor = "mcp.*"
+moduleRegex = "mcp.*"
 
 [tool.mypy]
 python_version = "3.10"
