@@ -1,7 +1,7 @@
 """Palo Alto Networks XML API client module."""
 
 import logging
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ElementTree
 from typing import TypeVar
 
 import httpx
@@ -37,7 +37,11 @@ class PanOSAPIClient:
         self.client = httpx.AsyncClient(verify=False)  # In production, use proper cert verification
 
     async def __aenter__(self) -> "PanOSAPIClient":
-        """Async context manager entry."""
+        """Async context manager entry.
+
+        Returns:
+            The PanOSAPIClient instance.
+        """
         return self
 
     async def __aexit__(
@@ -46,14 +50,20 @@ class PanOSAPIClient:
         exc_val: BaseException | None,
         exc_tb: object,
     ) -> None:
-        """Async context manager exit."""
+        """Async context manager exit.
+
+        Args:
+            exc_type: The exception type, if any.
+            exc_val: The exception value, if any.
+            exc_tb: The exception traceback, if any.
+        """
         await self.close()
 
     async def close(self) -> None:
         """Close the HTTP client."""
         await self.client.aclose()
 
-    async def _make_request(self, params: dict[str, str]) -> ET.Element:
+    async def _make_request(self, params: dict[str, str]) -> ElementTree.Element:
         """Make a request to the Palo Alto Networks XML API.
 
         Args:
@@ -78,7 +88,7 @@ class PanOSAPIClient:
             if not response_text:
                 raise ValueError("Empty response from API")
 
-            root = ET.fromstring(response_text)
+            root = ElementTree.fromstring(response_text)
 
             # Check for API errors
             status = root.get("status")
@@ -93,7 +103,7 @@ class PanOSAPIClient:
         except httpx.HTTPError as e:
             logger.error(f"HTTP error: {str(e)}")
             raise httpx.HTTPError(f"HTTP error: {str(e)}") from e
-        except ET.ParseError as e:
+        except ElementTree.ParseError as e:
             logger.error(f"XML parsing error: {str(e)}")
             raise ValueError(f"Failed to parse XML response: {str(e)}") from e
         except Exception as e:

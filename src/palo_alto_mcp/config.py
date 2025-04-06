@@ -48,11 +48,7 @@ def get_settings() -> Settings:
 
         # Create Settings with explicit values to satisfy type checker
         if hostname and api_key:
-            return Settings(
-                panos_hostname=hostname,
-                panos_api_key=api_key,
-                debug=debug
-            )
+            return Settings(panos_hostname=hostname, panos_api_key=api_key, debug=debug)
 
         # If environment variables are not set, let Pydantic handle validation
         # This will raise appropriate validation errors
@@ -60,7 +56,7 @@ def get_settings() -> Settings:
             # Type ignore to bypass type checker - Pydantic will handle validation
             panos_hostname=hostname or "",  # type: ignore
             panos_api_key=api_key or "",  # type: ignore
-            debug=debug
+            debug=debug,
         )
         return settings
     except Exception as e:

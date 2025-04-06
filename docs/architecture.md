@@ -10,7 +10,7 @@ graph TD
     B -->|XML API Requests| C[Palo Alto Networks NGFW]
     C -->|XML Responses| B
     B -->|Formatted Results| A
-    
+
     subgraph "Palo Alto MCP Server"
     D[FastMCP Server<br>server.py] -->|Uses| E[PAN-OS API Client<br>pan_os_api.py]
     F[Configuration<br>config.py] -->|Provides settings to| D
@@ -55,7 +55,7 @@ sequenceDiagram
     participant Server as FastMCP Server
     participant API as PAN-OS API Client
     participant Firewall as Palo Alto NGFW
-    
+
     Client->>Server: Call tool (e.g., retrieve_address_objects)
     Server->>API: Create API client with settings
     API->>Firewall: Make XML API request
@@ -97,7 +97,7 @@ The server implements comprehensive error handling:
 
 !!! note
     The MCP server must use a specific pattern for SSE endpoints to work correctly with the Windsurf client:
-    
+
     1. The main SSE connection endpoint should be at `/sse`
     2. The message endpoint for SSE transport should be at `/messages/` (not `/sse-messages/`)
     3. Both the server configuration and the client's `mcp_config.json` must align on these paths

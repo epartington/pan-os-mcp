@@ -111,13 +111,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-4. Set up pre-commit hooks:
-
-```bash
-pre-commit install
-```
-
-5. Create a `.env` file with your development environment variables:
+4. Create a `.env` file with your development environment variables:
 
 ```
 PANOS_HOSTNAME=your-firewall-hostname

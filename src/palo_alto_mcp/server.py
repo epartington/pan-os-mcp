@@ -67,7 +67,7 @@ async def retrieve_address_objects(_ctx: Context) -> str:
             formatted_output += f"## {obj['name']}\n"
             formatted_output += f"- **Type**: {obj.get('type', 'N/A')}\n"
             formatted_output += f"- **Value**: {obj.get('value', 'N/A')}\n"
-            if 'description' in obj:
+            if "description" in obj:
                 formatted_output += f"- **Description**: {obj['description']}\n"
             formatted_output += "\n"
 
@@ -101,9 +101,9 @@ async def retrieve_security_zones(_ctx: Context) -> str:
             formatted_output += f"## {zone['name']}\n"
             formatted_output += f"- **Type**: {zone.get('type', 'N/A')}\n"
 
-            if 'interfaces' in zone and zone['interfaces']:
+            if "interfaces" in zone and zone["interfaces"]:
                 formatted_output += "- **Interfaces**:\n"
-                for interface in zone['interfaces'].split(','):
+                for interface in zone["interfaces"].split(","):
                     if interface:
                         formatted_output += f"  - {interface}\n"
             else:
@@ -140,38 +140,38 @@ async def retrieve_security_policies(_ctx: Context) -> str:
         for policy in policies:
             formatted_output += f"## {policy['name']}\n"
 
-            if 'description' in policy and policy['description']:
+            if "description" in policy and policy["description"]:
                 formatted_output += f"- **Description**: {policy['description']}\n"
 
             formatted_output += f"- **Action**: {policy.get('action', 'N/A')}\n"
 
             formatted_output += "- **Source Zones**:\n"
-            for zone in policy.get('source_zones', '').split(','):
+            for zone in policy.get("source_zones", "").split(","):
                 if zone:
                     formatted_output += f"  - {zone}\n"
 
             formatted_output += "- **Source Addresses**:\n"
-            for addr in policy.get('source_addresses', '').split(','):
+            for addr in policy.get("source_addresses", "").split(","):
                 if addr:
                     formatted_output += f"  - {addr}\n"
 
             formatted_output += "- **Destination Zones**:\n"
-            for zone in policy.get('destination_zones', '').split(','):
+            for zone in policy.get("destination_zones", "").split(","):
                 if zone:
                     formatted_output += f"  - {zone}\n"
 
             formatted_output += "- **Destination Addresses**:\n"
-            for addr in policy.get('destination_addresses', '').split(','):
+            for addr in policy.get("destination_addresses", "").split(","):
                 if addr:
                     formatted_output += f"  - {addr}\n"
 
             formatted_output += "- **Applications**:\n"
-            for app in policy.get('applications', '').split(','):
+            for app in policy.get("applications", "").split(","):
                 if app:
                     formatted_output += f"  - {app}\n"
 
             formatted_output += "- **Services**:\n"
-            for svc in policy.get('services', '').split(','):
+            for svc in policy.get("services", "").split(","):
                 if svc:
                     formatted_output += f"  - {svc}\n"
 

@@ -25,7 +25,7 @@ async def test_get_address_objects():
         panos_hostname="firewall.example.com",
         panos_api_key="mock-api-key"
     )
-    
+
     # Create mock XML response
     xml_response = """
     <response status="success">
@@ -39,18 +39,18 @@ async def test_get_address_objects():
         </result>
     </response>
     """
-    
+
     # Mock the HTTP client
     with patch("httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
         mock_instance.get = AsyncMock()
         mock_instance.get.return_value.text = xml_response
         mock_instance.get.return_value.raise_for_status = AsyncMock()
-        
+
         # Create client and call method
         async with PanOSAPIClient(settings) as client:
             address_objects = await client.get_address_objects()
-        
+
         # Assert results
         assert len(address_objects) == 1
         assert address_objects[0]["name"] == "test-address"
@@ -75,7 +75,7 @@ async def test_retrieve_address_objects():
     with patch("palo_alto_mcp.server.PanOSAPIClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client_class.return_value.__aenter__.return_value = mock_client
-        
+
         # Mock the get_address_objects method
         mock_client.get_address_objects.return_value = [
             {
@@ -85,10 +85,10 @@ async def test_retrieve_address_objects():
                 "description": "Test address"
             }
         ]
-        
+
         # Call the tool function
         result = await retrieve_address_objects(None)
-        
+
         # Assert the result contains the expected information
         assert "test-address" in result
         assert "192.168.1.1/32" in result
@@ -116,7 +116,7 @@ async def test_mcp_server():
     async with create_connected_server_and_client_session(mcp) as client:
         # List available tools
         tools = await client.list_tools()
-        
+
         # Assert that the expected tools are available
         tool_names = [tool.name for tool in tools]
         assert "show_system_info" in tool_names
@@ -150,7 +150,7 @@ async def test_e2e_retrieve_address_objects():
     async with create_connected_server_and_client_session(mcp) as client:
         # Call the retrieve_address_objects tool
         result = await client.call_tool("retrieve_address_objects")
-        
+
         # Assert that the result is not empty
         assert result.content
         assert "# Palo Alto Networks Firewall Address Objects" in result.content
