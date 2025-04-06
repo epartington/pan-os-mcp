@@ -1,180 +1,226 @@
-# Palo Alto MCP Server
+# Palo Alto Networks MCP Server
 
-A TypeScript-based Model Context Protocol (MCP) server for integrating with Palo Alto Networks Next-Generation Firewall (NGFW) appliances. This server enables Windsurf and other MCP clients to retrieve firewall configuration data through simple tool calls.
+A Model Context Protocol (MCP) server for interfacing with Palo Alto Networks Next-Generation Firewalls (NGFW) using the `modelcontextprotocol` Python SDK.
+
+## Overview
+
+This package provides an MCP server that enables MCP clients (like Windsurf) to interact with Palo Alto Networks NGFW appliances via their XML API. The server is built using the `FastMCP` abstraction from the `modelcontextprotocol` Python SDK and provides tool-calling capabilities for retrieving firewall configuration data.
 
 ## Features
 
-- TypeScript implementation following the Cloudflare MCP server pattern
-- Retrieval of address objects, security zones, and security policies from Palo Alto firewalls
-- Support for standard I/O transport for command-line integration
-- npm package for easy installation and execution
+- Retrieve address objects from Palo Alto Networks firewalls
+- Retrieve security zones from Palo Alto Networks firewalls
+- Retrieve security policies from Palo Alto Networks firewalls
+- Get system information from Palo Alto Networks firewalls
+- Built using the `FastMCP` class from the `modelcontextprotocol` Python SDK
+- Supports standard I/O transport for command-based integration
 
 ## Installation
 
-```bash
-# Install globally
-npm install -g palo-alto-mcp
+### Prerequisites
 
-# Or run without installing
-npx -y palo-alto-mcp
+- Python 3.10 or higher
+- `uv` (recommended) or `pip`
+
+### Install from Source
+
+```bash
+# Using uv (recommended)
+uv pip install .
+
+# Using pip
+pip install .
 ```
 
 ## Configuration
 
-The server requires the following environment variables:
+The server requires the following environment variables to be set:
+
+- `PANOS_HOSTNAME`: Hostname or IP address of the Palo Alto Networks NGFW
+- `PANOS_API_KEY`: API key for authenticating with the Palo Alto Networks NGFW
+
+Optional environment variables:
+
+- `DEBUG`: Set to `true` to enable debug logging (default: `false`)
+
+Example configuration:
 
 ```bash
-# API key for authentication with Palo Alto firewall
-export PALO_ALTO_API_KEY="your-api-key-here"
-
-# Base URL for the Palo Alto API (include /api at the end)
-export PALO_ALTO_API_URL="https://your-firewall-ip-or-hostname/api"
-
-# Optional: Enable detailed logging
-export DEBUG="true"
+export PANOS_HOSTNAME="192.168.1.1"
+export PANOS_API_KEY="your-api-key-here"
 ```
 
-### Initialization
+## Usage
 
-To set up a configuration file:
+### Running the Server Directly
 
 ```bash
-npx -y palo-alto-mcp init
+# Using the module
+python -m palo_alto_mcp
+
+# Using the entry point script
+palo-alto-mcp
 ```
 
-This creates a configuration template at `~/.palo-alto-mcp/config.json`.
+### Integration with MCP Clients
 
-## Integration with Windsurf
+The server is designed to be used with MCP clients like Windsurf. It follows the command-based integration pattern using the standard I/O transport provided by the SDK.
 
-Add this to your `mcp_config.json` file:
+Example client configuration in `mcp_config.json`:
 
 ```json
 {
-  "palo-alto": {
-    "command": "npx -y palo-alto-mcp",
-    "args": []
-  }
+  "tools": [
+    {
+      "name": "panos",
+      "command": "palo-alto-mcp",
+      "args": [],
+      "env": {
+        "PANOS_HOSTNAME": "192.168.1.1",
+        "PANOS_API_KEY": "your-api-key-here"
+      }
+    }
+  ]
 }
 ```
-
-Make sure the environment variables are properly set before starting Windsurf.
 
 ## Available Tools
 
-| Tool Name | Description | Required Parameters |
-|-----------|-------------|---------------------|
-| `retrieve_address_objects` | Retrieve address objects from a Palo Alto firewall | `location` (firewall hostname/IP), `vsys` (default: vsys1) |
-| `retrieve_security_zones` | Retrieve security zones from a Palo Alto firewall | `location` (firewall hostname/IP), `vsys` (default: vsys1) |
-| `retrieve_security_policies` | Retrieve security policies from a Palo Alto firewall | `location` (firewall hostname/IP), `vsys` (default: vsys1) |
+### `show_system_info`
 
-## Usage Examples
+Get system information from the Palo Alto Networks firewall.
 
-### Retrieve Address Objects
+**Example Response:**
+```
+# Palo Alto Networks Firewall System Information
 
-```typescript
-// Example call to retrieve address objects
-const result = await callTool("retrieve_address_objects", {
-  location: "10.1.1.1",
-  vsys: "vsys1"
-});
+**hostname**: fw01.example.com
+**model**: PA-VM
+**serial**: 0123456789
+**sw-version**: 10.2.3
+...
 ```
 
-### Retrieve Security Zones
+### `retrieve_address_objects`
 
-```typescript
-// Example call to retrieve security zones
-const result = await callTool("retrieve_security_zones", {
-  location: "10.1.1.1",
-  vsys: "vsys1"
-});
+Get address objects configured on the Palo Alto Networks firewall.
+
+**Example Response:**
+```
+# Palo Alto Networks Firewall Address Objects
+
+## web-server
+- **Type**: ip-netmask
+- **Value**: 10.1.1.100/32
+- **Description**: Web Server
+
+## internal-network
+- **Type**: ip-netmask
+- **Value**: 10.1.0.0/16
+- **Description**: Internal Network
 ```
 
-### Retrieve Security Policies
+### `retrieve_security_zones`
 
-```typescript
-// Example call to retrieve security policies
-const result = await callTool("retrieve_security_policies", {
-  location: "10.1.1.1",
-  vsys: "vsys1"
-});
+Get security zones configured on the Palo Alto Networks firewall.
+
+**Example Response:**
+```
+# Palo Alto Networks Firewall Security Zones
+
+## trust
+- **Type**: layer3
+- **Interfaces**:
+  - ethernet1/1
+  - ethernet1/2
+
+## untrust
+- **Type**: layer3
+- **Interfaces**:
+  - ethernet1/3
 ```
 
-## Response Format
+### `retrieve_security_policies`
 
-All tools return data in JSON format wrapped in a TextContent object per MCP specifications:
+Get security policies configured on the Palo Alto Networks firewall.
 
-```json
-{
-  "toolResult": {
-    "content": [
-      {
-        "type": "text",
-        "text": "[JSON data for the requested objects]"
-      }
-    ]
-  }
-}
+**Example Response:**
 ```
+# Palo Alto Networks Firewall Security Policies
 
-## Troubleshooting
-
-### Common Errors
-
-- **"API key is required"**: Ensure the `PALO_ALTO_API_KEY` environment variable is set
-- **"API URL is required"**: Ensure the `PALO_ALTO_API_URL` environment variable is set
-- **"PAN-OS API error"**: Check firewall connectivity and API permissions
-
-### Debug Mode
-
-Set `DEBUG=true` to enable detailed logging:
-
-```bash
-DEBUG=true npx -y palo-alto-mcp
-```
-
-### Logs
-
-Logs use a structured JSON format with request IDs for easier tracking:
-
-```json
-{
-  "timestamp": "2025-04-05T12:34:56.789Z",
-  "request_id": "01234567-89ab-cdef-0123-456789abcdef",
-  "message": "Making request to PAN-OS API: api"
-}
+## allow-outbound
+- **Description**: Allow outbound traffic
+- **Action**: allow
+- **Source Zones**:
+  - trust
+- **Source Addresses**:
+  - any
+- **Destination Zones**:
+  - untrust
+- **Destination Addresses**:
+  - any
+- **Applications**:
+  - web-browsing
+  - ssl
+- **Services**:
+  - application-default
 ```
 
 ## Development
 
+### Setup Development Environment
+
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/palo-alto-mcp.git
-cd palo-alto-mcp
+# Clone the repository
+git clone https://github.com/cdot65/pan-os-mcp.git
+cd pan-os-mcp
 
-# Install dependencies
-npm install
+# Install development dependencies
+uv pip install -e ".[dev]"
+```
 
-# Build
-npm run build
+### Running Tests
 
-# Run in development mode
-npm run dev
+```bash
+pytest
+```
 
-# Test
-npm test
+### Code Quality
+
+```bash
+# Run linting
+ruff check .
+
+# Run type checking
+pyright
+```
+
+## Project Structure
+
+```
+palo-alto-mcp/
+├── src/
+│   └── palo_alto_mcp/
+│       ├── __init__.py           # Package initialization
+│       ├── __main__.py           # Command-line entry point
+│       ├── config.py             # Configuration management
+│       ├── server.py             # Main FastMCP server implementation
+│       └── pan_os_api.py         # API client for Palo Alto NGFW XML API
+├── tests/                        # Unit and integration tests
+├── pyproject.toml                # Python package definition
+└── README.md                     # Documentation
 ```
 
 ## License
 
 MIT
 
-## Project Patterns and Technology
+## Patterns and Technologies Used
 
-- **TypeScript**: Strict typing with ES2022 target
-- **MCP SDK**: Using `@modelcontextprotocol/sdk` for server implementation
-- **HTTP Client**: `undici` for API requests
-- **Validation**: `zod` for parameter validation
-- **Transport**: Standard I/O transport for command-line execution
-- **Environment**: Configuration via environment variables
-- **Error Handling**: Structured error responses with clear messages
-- **Logging**: Request ID-based logging with optional debug mode
+- **FastMCP**: Using the `FastMCP` class from the `modelcontextprotocol` Python SDK for MCP server implementation
+- **Async/Await**: Using Python's async/await pattern for non-blocking I/O operations
+- **Environment Variables**: Configuration via environment variables
+- **Pydantic Settings**: Using `pydantic-settings` for configuration management
+- **Type Hints**: Strong typing with Python type hints
+- **Context Managers**: Using async context managers for resource management
+- **XML Parsing**: Using the built-in `xml.etree.ElementTree` for parsing XML responses
