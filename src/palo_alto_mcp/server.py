@@ -19,7 +19,7 @@ mcp = FastMCP("PaloAltoMCPServer")
 
 
 @mcp.tool()
-async def show_system_info(_ctx: Context) -> str:
+async def show_system_info(ctx: Context) -> str:  # noqa: ARG001
     """Get system information from the Palo Alto Networks firewall.
 
     Returns:
@@ -45,7 +45,7 @@ async def show_system_info(_ctx: Context) -> str:
 
 
 @mcp.tool()
-async def retrieve_address_objects(_ctx: Context) -> str:
+async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
     """Get address objects configured on the Palo Alto Networks firewall.
 
     Returns:
@@ -79,7 +79,7 @@ async def retrieve_address_objects(_ctx: Context) -> str:
 
 
 @mcp.tool()
-async def retrieve_security_zones(_ctx: Context) -> str:
+async def retrieve_security_zones(ctx: Context) -> str:  # noqa: ARG001
     """Get security zones configured on the Palo Alto Networks firewall.
 
     Returns:
@@ -119,7 +119,7 @@ async def retrieve_security_zones(_ctx: Context) -> str:
 
 
 @mcp.tool()
-async def retrieve_security_policies(_ctx: Context) -> str:
+async def retrieve_security_policies(ctx: Context) -> str:  # noqa: ARG001
     """Get security policies configured on the Palo Alto Networks firewall.
 
     Returns:

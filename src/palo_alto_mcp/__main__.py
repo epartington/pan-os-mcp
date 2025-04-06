@@ -5,4 +5,5 @@ import sys
 from palo_alto_mcp.server import main
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
+    sys.exit(0)
