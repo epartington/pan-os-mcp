@@ -1,103 +1,95 @@
-# .windsurfrules: MCP Palo Alto Integration Server
+# .windsurfrules: MCP Palo Alto Integration Server (Python SDK)
 
-This file defines the coding and implementation rules for the MCP Palo Alto Integration Server project, ensuring consistency with the Product Requirements Document (PRD) and TypeScript-based technical stack.
+This file defines the coding and implementation rules for the MCP Palo Alto Integration Server project, ensuring consistency with the Product Requirements Document (PRD) and the specified **Python** technical stack using the **`modelcontextprotocol` Python SDK**.
 
 ---
 
 ## General Rules
 
-- **Use TypeScript as the target language**: Write all code in TypeScript, targeting ES2022, to align with the PRD’s technical stack and ensure strong typing for maintainability.
-- **Adhere to MCP SDK conventions**: Structure the server using the `@modelcontextprotocol/sdk` TypeScript SDK, implementing `list_tools` and `call_tool` handlers as per the Cloudflare MCP server pattern.
-- **Format tool outputs as TextContent**: Return all tool results (e.g., address objects, security zones, security policies) as `TextContent` objects with JSON-like string content, per the PRD’s functional requirements.
-- **Use async/await for I/O operations**: Implement all network calls (e.g., Palo Alto API requests via `undici` or `node-fetch`) and MCP server operations with async/await to support asynchronous execution.
-- **Validate tool parameters explicitly**: Use Zod for input validation of `location` and `vsys` parameters in each tool, throwing typed errors for missing or invalid values to meet security requirements.
+- **Use Python >= 3.10**: Write all code in Python 3.10 or later, as required by the `modelcontextprotocol` SDK, ensuring strong typing via type hints.
+- **Utilize the `modelcontextprotocol` Python SDK**: Structure the server primarily using the **`FastMCP`** class and its decorators (`@mcp.tool`) from the `mcp.server.fastmcp` module.
+- **Rely on `FastMCP` for Output Formatting**: Allow `FastMCP` to automatically handle the conversion of tool return values (strings, lists, dicts, `mcp.server.fastmcp.Image`) into appropriate MCP content types (e.g., `TextContent`, `ImageContent`).
+- **Use `async`/`await` for I/O**: Implement all network calls (e.g., Palo Alto API requests via `httpx`) and potentially long-running tool logic using `async`/`await`, leveraging the `anyio` library implicitly used by the SDK.
+- **Leverage Pydantic for Parameter Validation**: Define tool arguments using Python type hints (and optionally `pydantic.Field` annotations). Rely on `FastMCP`'s built-in Pydantic integration for automatic validation of incoming tool arguments.
 
 ---
 
 ## Code Organization
 
-- **Organize code into specified modules**:
-  - Place main server logic in `src/main.ts`.
-  - Implement Palo Alto API integration in `src/utils/pan-os-api.ts`.
-  - Define tools in `src/tools/` (e.g., `address-objects.ts`, `security-zones.ts`, `security-policies.ts`).
-  - Follow the PRD’s directory structure (`src/`, `tests/`, etc.).
-- **Use TypeScript interfaces**: Define strict interfaces for API responses and tool inputs/outputs in each module to leverage TypeScript’s type system.
+- **Organize code into specified Python modules**:
+  - Place the main `FastMCP` server instance and tool definitions in `src/palo_alto_mcp/server.py`.
+  - Implement Palo Alto XML API integration logic in `src/palo_alto_mcp/pan_os_api.py`.
+  - Define the command-line entry point in `src/palo_alto_mcp/__main__.py`.
+  - Follow the PRD’s directory structure (`src/palo_alto_mcp/`, `tests/`, `pyproject.toml`, etc.).
+- **Use Python Type Hints**: Define strict type hints for function arguments, return values, and variables, especially for API interactions and tool signatures, to leverage Pydantic validation and static analysis (`pyright`/`mypy`).
 
 ---
 
 ## Server Configuration
 
-- **Support standard I/O transport**: Configure the server to use standard I/O transport by default for command-line execution, ensuring compatibility with Windsurf MCP client workflows.
-- **Read sensitive data from environment variables**: Access Palo Alto API keys and configuration (e.g., API URL) via `process.env`, avoiding hardcoding to comply with security requirements.
-- **Add structured logging with request IDs**: Implement logging in `src/main.ts` with a unique request ID for each tool call, using a format like `{ "request_id": "...", "message": "..." }`, to support monitoring requirements.
+- **Default to Standard I/O Transport**: Configure the server to use standard I/O transport by default via `mcp.run()`, ensuring compatibility with command-based client workflows (like Windsurf or `mcp install`).
+- **Read Sensitive Data from Environment Variables**: Access Palo Alto API keys and configuration (e.g., `PANOS_HOSTNAME`, `PANOS_API_KEY`) via environment variables (`os.environ`), potentially managed using `pydantic-settings`. Avoid hardcoding credentials.
+- **Use SDK Logging Utilities**: Implement structured logging using `mcp.server.fastmcp.utilities.logging` or standard Python `logging`, potentially leveraging the `Context` object within tools for request-specific logging.
 
 ---
 
 ## Tool Implementation
 
-- **Implement core tools**: Define three tools in `src/tools/`:
-  - `retrieve_address_objects`: Fetch address objects from the Palo Alto API.
-  - `retrieve_security_zones`: Fetch security zones from the Palo Alto API.
-  - `retrieve_security_policies`: Fetch security policies from the Palo Alto API.
-- **Document tool schemas in code**: Include tool schemas in the `list_tools` handler (e.g., `{ type: "object", required: ["location", "vsys"], ... }`) to match PRD specifications.
-- **Use `undici` or `node-fetch` for API calls**: Make HTTPS requests to the Palo Alto NGFW XML API using `undici` (preferred for Node.js) or `node-fetch`, ensuring async compatibility and proper error handling.
+- **Implement Core Tools using `@mcp.tool`**: Define three functions decorated with `@mcp.tool` in `server.py`:
+  - `retrieve_address_objects`: Fetch address objects via `pan_os_api.py`.
+  - `retrieve_security_zones`: Fetch security zones via `pan_os_api.py`.
+  - `retrieve_security_policies`: Fetch security policies via `pan_os_api.py`.
+- **Derive Tool Schemas from Type Hints**: Rely on `FastMCP` to automatically generate JSON schemas for tool inputs based on the Python function signatures (type hints and defaults). Add descriptions via `pydantic.Field` if needed.
+- **Use `httpx` for API Calls**: Make asynchronous HTTPS requests to the Palo Alto NGFW XML API using `httpx` within `pan_os_api.py`, ensuring proper error handling (connection, status codes).
 
 ---
 
-## npm Package Rules
+## Python Package Rules
 
-- **Follow npm conventions**:
-- Define the package in `package.json` with a binary entry point (`palo-alto-mcp`).
-- Ensure it’s executable via `npx -y palo-alto-mcp`.
-- Use semantic versioning (e.g., `0.1.0` for MVP, `1.0.0` for full release).
-- **Keep dependencies minimal**: Rely on `@modelcontextprotocol/sdk`, `undici` (or `node-fetch`), and `zod` as primary dependencies; avoid additional frameworks beyond the MCP SDK.
-- **Provide configuration via environment variables**: Support API credentials, debug flags, and API URL through `process.env` for flexibility.
+- **Follow Python Packaging Standards**:
+  - Define the package, dependencies, and build system in `pyproject.toml`.
+  - Ensure the package is installable via `uv pip install .` or `pip install .`.
+  - Define an entry point via `__main__.py` that allows running via `python -m palo_alto_mcp`.
+  - Use semantic versioning (e.g., `0.1.0` for MVP, `1.0.0` for full release), potentially managed via `uv-dynamic-versioning`.
+- **Keep Dependencies Minimal**: Rely primarily on `mcp` and `httpx`. Use `pydantic-settings` only if needed for config management.
+- **Provide Configuration via Environment Variables**: Design tools and the API client to primarily consume configuration (API host, key) from environment variables.
 
 ---
 
 ## Testing and Deployment
 
-- **Test locally with MCP client**: Use a standard MCP client to test tools locally via standard I/O transport, verifying compatibility with Windsurf’s workflow.
-- **Write unit and integration tests**: Place tests in `tests/` to cover API integration, tool execution, and error handling, using a framework like Jest or Vitest.
-- **Optimize for npm deployment**: Ensure the package installs and runs seamlessly with `npm install -g palo-alto-mcp`, aligning with the PRD’s usability requirements.
+- **Test Locally with SDK Tools**: Use `mcp dev` for development and testing with the MCP Inspector.
+- **Write Unit and Integration Tests**: Place tests in `tests/` using `pytest`.
+  - Unit test `pan_os_api.py` logic, mocking `httpx`.
+  - Integration test MCP interactions using the SDK's `create_connected_server_and_client_session`.
+- **Optimize for `pip`/`uv` Installation**: Ensure the package builds correctly (`uv build`) and installs seamlessly in clean environments.
 
 ---
 
 ## Non-Functional Requirements
 
-- **Performance**: Ensure tool requests process within 2 seconds (excluding API latency) and minimize server startup time.
+- **Performance**: Ensure tool requests process within 2 seconds (excluding API latency) and minimize server startup time for stdio execution.
 - **Security**:
   - Securely handle API keys via environment variables.
-  - Validate all inputs with Zod to prevent injection attacks.
-  - Implement graceful shutdown on termination.
-- **Reliability**: Provide clear, typed error messages for API failures and invalid requests.
-- **Usability**: Maintain consistency with other MCP npm packages in installation and configuration (e.g., `mcp_config.json`).
+  - Rely on SDK's Pydantic validation for tool inputs.
+  - Ensure graceful shutdown is handled by the SDK/`anyio`.
+- **Reliability**: Implement clear error handling within tool functions and the API client, returning meaningful errors via MCP.
+- **Usability**: Maintain consistency with other MCP Python packages regarding installation (`pip`/`uv`) and configuration (environment variables).
 
 ---
 
 ## Documentation
 
 - **Document in `README.md`**: Include:
-  - Installation instructions (`npm install -g palo-alto-mcp`).
-  - Usage examples (`npx -y palo-alto-mcp`).
-  - Environment variable setup (e.g., `PALO_ALTO_API_KEY`, `PALO_ALTO_API_URL`).
-  - Troubleshooting tips with common error messages.
+  - Installation instructions (`uv pip install .` or `pip install .`).
+  - Usage/Invocation examples (`python -m palo_alto_mcp` or via `mcp install`).
+  - Required Environment Variables (`PANOS_HOSTNAME`, `PANOS_API_KEY`).
+  - List of available tools and their purpose.
 
 ---
 
 ## Notes
 
-- Target MVP release: May 15, 2025.
-- Target full release: June 1, 2025.
-- Regularly validate against the Cloudflare MCP server pattern and Windsurf client expectations.
+- Ensure alignment with the `modelcontextprotocol` Python SDK examples and best practices.
+- Use `uv` for development workflows (dependency management, linting, testing) as recommended by the SDK.
 - Refer to the PRD for detailed functional and non-functional requirements.
-
-### Key Changes from Python to TypeScript
-
-1. **Language Shift**: Replaced Python 3.11 with TypeScript (ES2022), aligning with the PRD’s stack.
-2. **SDK Update**: Switched from the Python MCP SDK to the TypeScript `@modelcontextprotocol/sdk`.
-3. **Transport Adjustment**: Changed SSE transport to standard I/O transport as the default, per the PRD’s TypeScript implementation focus, while keeping compatibility with Windsurf.
-4. **HTTP Client**: Replaced `httpx` with `undici` or `node-fetch` for Node.js compatibility.
-5. **Validation**: Swapped Python-specific validation for Zod, a TypeScript-friendly library.
-6. **Deployment**: Removed Kubernetes-specific rules (e.g., manifests, Dockerfile) since the PRD emphasizes npm packaging over containerization for this TypeScript implementation.
-7. **Structure**: Updated module names (e.g., `.py` to `.ts`) and aligned with the PRD’s TypeScript directory structure.
