@@ -56,12 +56,41 @@ $env:PANOS_API_KEY = "your-api-key"
 $env:PANOS_DEBUG = "false"
 ```
 
-## Obtaining a Palo Alto Networks API Key
+## Obtaining an API Key
 
-1. Log in to the Palo Alto Networks web interface
-2. Navigate to Device > Users > Local User Management
-3. Select the user and click "Generate API Key"
-4. Copy the generated API key
+To obtain an API key from your Palo Alto Networks firewall:
+
+1. Log in to the web interface of your Palo Alto Networks firewall.
+2. Navigate to **Device** > **Users** > **API Key Generation**.
+3. Click **Generate API Key**.
+4. Copy the generated API key and use it as the value for the `PANOS_API_KEY` environment variable.
 
 !!! note
-    The API key provides access to your firewall with the same permissions as the user account. Use a dedicated account with appropriate permissions for security.
+    API keys are associated with the user account that generates them and inherit the permissions of that user. Make sure the user has sufficient permissions to access the data you need.
+
+## HTTP Server Configuration
+
+When running the MCP server with HTTP transport (for development or testing), you can use the provided script:
+
+```bash
+./scripts/run_http_server.sh
+```
+
+This script sets the necessary environment variables and starts the server with HTTP transport enabled.
+
+## Windsurf Integration
+
+To configure the server for use with Windsurf, you need to update the `mcp_config.json` file in your Windsurf configuration directory:
+
+```json
+{
+  "command": "python",
+  "args": ["-m", "palo_alto_mcp"],
+  "env": {
+    "PANOS_HOSTNAME": "firewall.example.com",
+    "PANOS_API_KEY": "your-api-key"
+  }
+}
+```
+
+Make sure to replace the placeholder values with your actual firewall hostname and API key.

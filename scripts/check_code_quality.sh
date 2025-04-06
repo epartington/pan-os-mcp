@@ -30,4 +30,28 @@ poetry run mypy src || { echo "mypy check failed"; exit 1; }
 echo "Running pyright type checking..."
 poetry run pyright src || { echo "pyright check failed"; exit 1; }
 
+# Run yamllint (only on docs, scripts, src, tests and mkdocs.yml)
+echo "Running YAML linting..."
+poetry run yamllint -c .yamllint docs/ scripts/ src/ tests/ mkdocs.yml || { echo "YAML linting failed"; exit 1; }
+
+# Fix docstring issues automatically and then check
+echo "Fixing docstring issues..."
+poetry run ruff check --select D --fix src tests
+
+# Check for security issues (ignoring specific known issues)
+echo "Checking for security issues..."
+poetry run ruff check --select S --ignore S501,S314 src tests || { echo "Security check failed"; exit 1; }
+
+# Check for unused imports
+echo "Checking for unused imports..."
+poetry run ruff check --select F401 src tests || { echo "Unused imports check failed"; exit 1; }
+
+# Check for undefined names
+echo "Checking for undefined names..."
+poetry run ruff check --select F821 src tests || { echo "Undefined names check failed"; exit 1; }
+
+# Validate mkdocs configuration
+echo "Validating mkdocs configuration..."
+poetry run mkdocs build --strict --site-dir /tmp/mkdocs-build || { echo "MkDocs validation failed"; exit 1; }
+
 echo "All code quality checks passed!"

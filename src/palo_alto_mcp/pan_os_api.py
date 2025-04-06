@@ -23,6 +23,7 @@ class PanOSAPIClient:
         hostname: The hostname or IP address of the NGFW.
         api_key: The API key for authenticating with the NGFW.
         client: An httpx AsyncClient for making HTTP requests.
+
     """
 
     def __init__(self, settings: Settings) -> None:
@@ -30,6 +31,7 @@ class PanOSAPIClient:
 
         Args:
             settings: Application settings containing NGFW connection information.
+
         """
         self.hostname = settings.panos_hostname
         self.api_key = settings.panos_api_key
@@ -41,6 +43,7 @@ class PanOSAPIClient:
 
         Returns:
             The PanOSAPIClient instance.
+
         """
         return self
 
@@ -56,6 +59,7 @@ class PanOSAPIClient:
             exc_type: The exception type, if any.
             exc_val: The exception value, if any.
             exc_tb: The exception traceback, if any.
+
         """
         await self.close()
 
@@ -75,6 +79,7 @@ class PanOSAPIClient:
         Raises:
             httpx.HTTPError: If the HTTP request fails.
             ValueError: If the API returns an error response.
+
         """
         # Add the API key to the parameters
         params["key"] = self.api_key
@@ -115,6 +120,7 @@ class PanOSAPIClient:
 
         Returns:
             Dictionary containing system information.
+
         """
         params = {"type": "op", "cmd": "<show><system><info></info></system></show>"}
 
@@ -139,6 +145,7 @@ class PanOSAPIClient:
 
         Returns:
             List of dictionaries containing address object information.
+
         """
         params = {"type": "config", "action": "get", "xpath": "/config/devices/entry/vsys/entry/address"}
 
@@ -178,6 +185,7 @@ class PanOSAPIClient:
 
         Returns:
             List of dictionaries containing security zone information.
+
         """
         params = {"type": "config", "action": "get", "xpath": "/config/devices/entry/vsys/entry/zone"}
 
@@ -221,6 +229,7 @@ class PanOSAPIClient:
 
         Returns:
             List of dictionaries containing security policy information.
+
         """
         params = {"type": "config", "action": "get", "xpath": "/config/devices/entry/vsys/entry/rulebase/security/rules"}
 

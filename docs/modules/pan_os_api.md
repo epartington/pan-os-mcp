@@ -33,10 +33,39 @@ def __init__(self, settings: Settings) -> None:
     self.client = httpx.AsyncClient(verify=False)  # In production, use proper cert verification
 ```
 
+### Async Context Manager Support
+
+The client implements the async context manager protocol, allowing it to be used with the `async with` statement:
+
+```python
+async def __aenter__(self) -> "PanOSAPIClient":
+    """Async context manager entry.
+
+    Returns:
+        The PanOSAPIClient instance.
+    """
+    return self
+
+async def __aexit__(
+    self,
+    exc_type: type[BaseException] | None,
+    exc_val: BaseException | None,
+    exc_tb: object,
+) -> None:
+    """Async context manager exit.
+
+    Args:
+        exc_type: The exception type, if an exception was raised.
+        exc_val: The exception value, if an exception was raised.
+        exc_tb: The exception traceback, if an exception was raised.
+    """
+    await self.client.aclose()
+```
+
 ### Making Requests
 
 ```python
-async def _make_request(self, params: dict[str, str]) -> ET.Element:
+async def _make_request(self, params: dict[str, str]) -> ElementTree.Element:
     """Make a request to the Palo Alto Networks XML API.
 
     Args:
@@ -53,40 +82,30 @@ async def _make_request(self, params: dict[str, str]) -> ET.Element:
     params["key"] = self.api_key
 
     try:
-        response = await self.client.get(self.base_url, params=params, timeout=30.0)
+        # Make the request
+        response = await self.client.get(self.base_url, params=params)
         response.raise_for_status()
 
         # Parse the XML response
-        response_text = response.text
-        if not response_text:
-            raise ValueError("Empty response from API")
-
-        root = ET.fromstring(response_text)
+        root = ElementTree.fromstring(response.text)
 
         # Check for API errors
-        status = root.get("status")
-        if status != "success":
-            error_msg = "Unknown error"
-            error_element = root.find(".//msg")
-            if error_element is not None and error_element.text is not None:
-                error_msg = error_element.text
-            raise ValueError(f"API error: {error_msg}") from None
+        status = root.find(".//status")
+        if status is not None and status.text != "success":
+            error_msg = root.find(".//msg")
+            if error_msg is not None and error_msg.text:
+                raise ValueError(f"API error: {error_msg.text}")
+            else:
+                raise ValueError("Unknown API error")
 
         return root
     except httpx.HTTPError as e:
-        logger.error(f"HTTP error: {str(e)}")
-        raise httpx.HTTPError(f"HTTP error: {str(e)}") from e
-    except ET.ParseError as e:
-        logger.error(f"XML parsing error: {str(e)}")
-        raise ValueError(f"Failed to parse XML response: {str(e)}") from e
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise Exception(f"Unexpected error: {str(e)}") from e
+        raise httpx.HTTPError(f"HTTP request failed: {str(e)}")
 ```
 
-### Data Retrieval Methods
+## API Methods
 
-#### get_system_info
+### get_system_info
 
 ```python
 async def get_system_info(self) -> dict[str, str]:
@@ -114,7 +133,9 @@ async def get_system_info(self) -> dict[str, str]:
     return system_info
 ```
 
-#### get_address_objects
+This method retrieves system information from the firewall, including hostname, model, serial number, software version, and uptime.
+
+### get_address_objects
 
 ```python
 async def get_address_objects(self) -> list[dict[str, str]]:
@@ -157,7 +178,9 @@ async def get_address_objects(self) -> list[dict[str, str]]:
     return address_objects
 ```
 
-#### get_security_zones
+This method retrieves address objects configured on the firewall, including their names, types, values, and descriptions.
+
+### get_security_zones
 
 ```python
 async def get_security_zones(self) -> list[dict[str, str]]:
@@ -204,10 +227,12 @@ async def get_security_zones(self) -> list[dict[str, str]]:
     return zones
 ```
 
-#### get_security_policies
+This method retrieves security zones configured on the firewall, including their names, types, and interfaces.
+
+### get_security_policies
 
 ```python
-async def get_security_policies(self) -> list[dict[str, str]]:
+async def get_security_policies(self) -> list[dict[str, str | list[str]]]:
     """Get security policies configured on the firewall.
 
     Returns:
@@ -262,34 +287,8 @@ async def get_security_policies(self) -> list[dict[str, str]]:
     return policies
 ```
 
-## XML API Interaction
+This method retrieves security policies configured on the firewall, including their names, sources, destinations, applications, and actions.
 
-The PAN-OS API client interacts with the Palo Alto Networks XML API using the following pattern:
+## XML Parsing
 
-1. Construct a query with the appropriate parameters (type, action, xpath, etc.)
-2. Make an HTTP GET request to the API endpoint
-3. Parse the XML response
-4. Extract the relevant data from the XML
-5. Return the data in a structured format
-
-## Error Handling
-
-The client implements comprehensive error handling:
-
-- HTTP errors (e.g., connection failures, timeouts)
-- XML parsing errors
-- API errors (e.g., authentication failures, invalid requests)
-- Unexpected errors
-
-## Example Usage
-
-```python
-from palo_alto_mcp.config import get_settings
-from palo_alto_mcp.pan_os_api import PanOSAPIClient
-
-async def example():
-    settings = get_settings()
-    async with PanOSAPIClient(settings) as client:
-        address_objects = await client.get_address_objects()
-        print(address_objects)
-```
+The module uses Python's standard `xml.etree.ElementTree` module to parse XML responses from the Palo Alto Networks API. Each method includes specific parsing logic to extract the relevant data from the XML structure and convert it to a more usable Python data structure (dictionaries and lists).

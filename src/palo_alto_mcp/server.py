@@ -24,6 +24,7 @@ async def show_system_info(ctx: Context) -> str:  # noqa: ARG001
 
     Returns:
         A formatted string containing system information.
+
     """
     logger.info("Retrieving system information")
 
@@ -50,6 +51,7 @@ async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
 
     Returns:
         A formatted string containing address object information.
+
     """
     logger.info("Retrieving address objects")
 
@@ -84,6 +86,7 @@ async def retrieve_security_zones(ctx: Context) -> str:  # noqa: ARG001
 
     Returns:
         A formatted string containing security zone information.
+
     """
     logger.info("Retrieving security zones")
 
@@ -124,6 +127,7 @@ async def retrieve_security_policies(ctx: Context) -> str:  # noqa: ARG001
 
     Returns:
         A formatted string containing security policy information.
+
     """
     logger.info("Retrieving security policies")
 

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         panos_hostname: Hostname or IP address of the Palo Alto Networks NGFW.
         panos_api_key: API key for authenticating with the Palo Alto Networks NGFW.
         debug: Enable debug logging.
+
     """
 
     panos_hostname: str
@@ -36,6 +37,7 @@ def get_settings() -> Settings:
 
     Raises:
         ValueError: If required environment variables are missing.
+
     """
     try:
         # Get values from environment variables directly to satisfy type checker
