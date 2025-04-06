@@ -19,7 +19,7 @@ mcp = FastMCP("PaloAltoMCPServer")
 
 ```python
 @mcp.tool()
-async def show_system_info(_ctx: Context) -> str:
+async def show_system_info(ctx: Context) -> str:  # noqa: ARG001
     """Get system information from the Palo Alto Networks firewall.
 
     Returns:
@@ -34,7 +34,7 @@ This tool retrieves system information from the Palo Alto Networks firewall, inc
 
 ```python
 @mcp.tool()
-async def retrieve_address_objects(_ctx: Context) -> str:
+async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
     """Get address objects configured on the Palo Alto Networks firewall.
 
     Returns:
@@ -49,7 +49,7 @@ This tool retrieves address objects configured on the Palo Alto Networks firewal
 
 ```python
 @mcp.tool()
-async def retrieve_security_zones(_ctx: Context) -> str:
+async def retrieve_security_zones(ctx: Context) -> str:  # noqa: ARG001
     """Get security zones configured on the Palo Alto Networks firewall.
 
     Returns:
@@ -58,13 +58,13 @@ async def retrieve_security_zones(_ctx: Context) -> str:
     # Implementation details...
 ```
 
-This tool retrieves security zones configured on the Palo Alto Networks firewall, including their names, types, and associated interfaces.
+This tool retrieves security zones configured on the Palo Alto Networks firewall, including their names, types, and interfaces.
 
 ### retrieve_security_policies
 
 ```python
 @mcp.tool()
-async def retrieve_security_policies(_ctx: Context) -> str:
+async def retrieve_security_policies(ctx: Context) -> str:  # noqa: ARG001
     """Get security policies configured on the Palo Alto Networks firewall.
 
     Returns:
@@ -73,7 +73,7 @@ async def retrieve_security_policies(_ctx: Context) -> str:
     # Implementation details...
 ```
 
-This tool retrieves security policies configured on the Palo Alto Networks firewall, including their names, descriptions, actions, source and destination zones and addresses, applications, and services.
+This tool retrieves security policies configured on the Palo Alto Networks firewall, including their names, sources, destinations, applications, and actions.
 
 ## Implementation Details
 
@@ -91,7 +91,7 @@ For example, the implementation of `retrieve_address_objects` looks like this:
 
 ```python
 @mcp.tool()
-async def retrieve_address_objects(_ctx: Context) -> str:
+async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
     logger.info("Retrieving address objects")
 
     try:
@@ -136,4 +136,12 @@ def main() -> None:
         raise
 ```
 
-The `main` function is the entry point for the server. It validates the settings, starts the server, and handles any exceptions that may occur during startup.
+The `main()` function is the entry point for the server. It validates the settings, starts the server, and handles any exceptions that occur during startup.
+
+## Error Handling
+
+All tool functions include comprehensive error handling to ensure that any issues with the Palo Alto Networks API are properly reported to the client. Errors are logged and returned as formatted strings, making them easy to understand and troubleshoot.
+
+## Logging
+
+The server uses Python's standard logging module to provide informational and error messages. The log level can be controlled via the `PANOS_DEBUG` environment variable.

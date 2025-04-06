@@ -28,7 +28,12 @@ class Settings(BaseSettings):
     )
 ```
 
-The `Settings` class is a Pydantic model that defines the application settings. It uses `pydantic-settings` to load values from environment variables.
+The `Settings` class is a Pydantic model that defines the application settings. It uses `pydantic-settings` to load values from environment variables with the following features:
+
+- Loads settings from environment variables with the `PANOS_` prefix
+- Supports loading from a `.env` file in the project root
+- Case-insensitive environment variable names
+- Type validation for all settings
 
 ## get_settings Function
 
@@ -53,44 +58,48 @@ def get_settings() -> Settings:
 
         # Create Settings with explicit values to satisfy type checker
         if hostname and api_key:
-            return Settings(
-                panos_hostname=hostname,
-                panos_api_key=api_key,
-                debug=debug
-            )
-
-        # If environment variables are not set, let Pydantic handle validation
-        # This will raise appropriate validation errors
-        settings = Settings(
-            # Type ignore to bypass type checker - Pydantic will handle validation
-            panos_hostname=hostname or "",  # type: ignore
-            panos_api_key=api_key or "",  # type: ignore
-            debug=debug
-        )
+            return Settings(panos_hostname=hostname, panos_api_key=api_key, debug=debug)
+        
+        # If any required values are missing, try loading from .env file
+        settings = Settings()
         return settings
     except Exception as e:
-        error_msg = (
-            f"Error loading configuration: {str(e)}\n"
-            "Please ensure the following environment variables are set:\n"
-            "- PANOS_HOSTNAME: Hostname or IP address of the Palo Alto Networks NGFW\n"
-            "- PANOS_API_KEY: API key for authenticating with the Palo Alto Networks NGFW\n"
-            "Optional environment variables:\n"
-            "- PANOS_DEBUG: Set to 'true' to enable debug logging"
-        )
+        # Provide a helpful error message
+        error_msg = f"Failed to load settings: {str(e)}"
+        required_vars = ["PANOS_HOSTNAME", "PANOS_API_KEY"]
+        missing_vars = [var for var in required_vars if os.environ.get(var) is None]
+        
+        if missing_vars:
+            error_msg += f"\nMissing required environment variables: {', '.join(missing_vars)}"
+            error_msg += "\nPlease set these variables in your environment or .env file."
+        
         raise ValueError(error_msg) from e
 ```
 
-The `get_settings` function loads the application settings from environment variables and validates them. If required environment variables are missing, it raises a `ValueError` with a helpful error message.
+The `get_settings` function attempts to load the application settings from environment variables. If the required environment variables are missing, it provides a helpful error message indicating which variables need to be set.
 
 ## Environment Variables
 
-The following environment variables are used to configure the application:
+The configuration module uses the following environment variables:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `PANOS_HOSTNAME` | Hostname or IP address of the Palo Alto Networks NGFW | Yes |
-| `PANOS_API_KEY` | API key for authenticating with the Palo Alto Networks NGFW | Yes |
-| `PANOS_DEBUG` | Enable debug logging | No (defaults to `false`) |
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `PANOS_HOSTNAME` | Hostname or IP address of the Palo Alto Networks NGFW | Yes | None |
+| `PANOS_API_KEY` | API key for authenticating with the Palo Alto Networks NGFW | Yes | None |
+| `PANOS_DEBUG` | Enable debug logging | No | `false` |
+
+## .env File Support
+
+The configuration module supports loading settings from a `.env` file in the project root directory. This file should contain key-value pairs in the format:
+
+```
+PANOS_HOSTNAME=firewall.example.com
+PANOS_API_KEY=your-api-key
+PANOS_DEBUG=false
+```
+
+!!! warning
+    Never commit the `.env` file to version control as it contains sensitive information.
 
 ## Example Usage
 
@@ -104,4 +113,3 @@ def example():
         print(f"Debug mode: {settings.debug}")
     except ValueError as e:
         print(f"Configuration error: {str(e)}")
-```
