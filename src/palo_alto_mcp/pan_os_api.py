@@ -222,7 +222,8 @@ class PanOSAPIClient:
 
                     # Log the structure of the response for debugging
                     logger.debug(
-                        f"Device group '{dg_name}' address response: {ElementTree.tostring(dg_addr_root, encoding='unicode')[:200]}..."
+                        f"Device group '{dg_name}' address response: "
+                        f"{ElementTree.tostring(dg_addr_root, encoding='unicode')[:200]}..."
                     )
 
                     dg_entries = dg_addr_root.findall(".//entry")
