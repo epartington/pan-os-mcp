@@ -85,6 +85,7 @@ class PanOSAPIClient:
         params["key"] = self.api_key
 
         try:
+            logger.debug(f"Making API request to {self.base_url} with params: {params}")
             response = await self.client.get(self.base_url, params=params, timeout=30.0)
             response.raise_for_status()
 
@@ -92,6 +93,8 @@ class PanOSAPIClient:
             response_text = response.text
             if not response_text:
                 raise ValueError("Empty response from API")
+
+            logger.debug(f"Received response: {response_text[:200]}..." if len(response_text) > 200 else response_text)
 
             root = ElementTree.fromstring(response_text)
 
@@ -122,6 +125,7 @@ class PanOSAPIClient:
             Dictionary containing system information.
 
         """
+        # Use the correct XML command format that works with this firewall
         params = {"type": "op", "cmd": "<show><system><info></info></system></show>"}
 
         root = await self._make_request(params)
@@ -132,11 +136,26 @@ class PanOSAPIClient:
 
         # Extract system information
         system_info = {}
-        for child in result:
-            if child.text is not None:
-                system_info[child.tag] = child.text
-            else:
-                system_info[child.tag] = ""
+
+        # Handle the case where result has a 'system' child element
+        system_elem = result.find("system")
+        if system_elem is not None:
+            for child in system_elem:
+                if child.text is not None:
+                    system_info[child.tag] = child.text
+                else:
+                    system_info[child.tag] = ""
+        else:
+            # Handle the case where result contains the system info directly
+            for child in result:
+                if child.text is not None:
+                    system_info[child.tag] = child.text
+                else:
+                    system_info[child.tag] = ""
+
+        # If no system info was found, add a default message
+        if not system_info:
+            system_info["status"] = "Connected to firewall, but no detailed system information available"
 
         return system_info
 
@@ -145,40 +164,149 @@ class PanOSAPIClient:
 
         Returns:
             List of dictionaries containing address object information.
+            Each dictionary contains name, type, value, and optionally description and location.
 
         """
-        params = {"type": "config", "action": "get", "xpath": "/config/devices/entry/vsys/entry/address"}
-
-        root = await self._make_request(params)
-        entries = root.findall(".//entry")
-
         address_objects = []
-        for entry in entries:
-            address_obj = {"name": entry.get("name") or ""}
+        logger.info("Retrieving address objects from Panorama")
 
-            # Check for different address types
-            ip_netmask = entry.find("ip-netmask")
-            if ip_netmask is not None and ip_netmask.text is not None:
-                address_obj["type"] = "ip-netmask"
-                address_obj["value"] = ip_netmask.text
-            elif (ip_range := entry.find("ip-range")) is not None and ip_range.text is not None:
-                address_obj["type"] = "ip-range"
-                address_obj["value"] = ip_range.text
-            elif (fqdn := entry.find("fqdn")) is not None and fqdn.text is not None:
-                address_obj["type"] = "fqdn"
-                address_obj["value"] = fqdn.text
-            else:
-                address_obj["type"] = "unknown"
-                address_obj["value"] = ""
+        # 1. Get shared address objects
+        shared_params = {"type": "config", "action": "get", "xpath": "/config/shared/address"}
+        try:
+            logger.info("Retrieving shared address objects")
+            root = await self._make_request(shared_params)
 
-            # Get description if available
-            description = entry.find("description")
-            if description is not None and description.text is not None:
-                address_obj["description"] = description.text
+            # Log the structure of the response for debugging
+            logger.debug(f"Shared address response structure: {ElementTree.tostring(root, encoding='unicode')[:200]}...")
 
-            address_objects.append(address_obj)
+            shared_entries = root.findall(".//entry")
+            logger.info(f"Found {len(shared_entries)} shared address objects")
 
+            for entry in shared_entries:
+                address_obj = {"name": entry.get("name") or "", "location": "shared"}
+
+                # Process the address object
+                address_objects.append(self._process_address_entry(entry, address_obj))
+
+        except Exception as e:
+            logger.error(f"Error retrieving shared address objects: {str(e)}")
+
+        # 2. Get device group address objects
+        try:
+            # First, get the list of device groups
+            logger.info("Retrieving device groups")
+            dg_list_params = {"type": "config", "action": "get", "xpath": "/config/devices/entry/device-group"}
+            dg_root = await self._make_request(dg_list_params)
+
+            # Log the structure of the response for debugging
+            logger.debug(f"Device group response structure: {ElementTree.tostring(dg_root, encoding='unicode')[:200]}...")
+
+            device_groups = dg_root.findall(".//entry")
+            logger.info(f"Found {len(device_groups)} device groups")
+
+            for dg in device_groups:
+                dg_name = dg.get("name")
+                if not dg_name:
+                    continue
+
+                logger.info(f"Retrieving address objects for device group '{dg_name}'")
+                # Get addresses for this device group
+                dg_addr_params = {
+                    "type": "config",
+                    "action": "get",
+                    "xpath": f"/config/devices/entry/device-group/entry[@name='{dg_name}']/address",
+                }
+
+                try:
+                    dg_addr_root = await self._make_request(dg_addr_params)
+
+                    # Log the structure of the response for debugging
+                    logger.debug(
+                        f"Device group '{dg_name}' address response: "
+                        f"{ElementTree.tostring(dg_addr_root, encoding='unicode')[:200]}..."
+                    )
+
+                    dg_entries = dg_addr_root.findall(".//entry")
+                    logger.info(f"Found {len(dg_entries)} address objects in device group '{dg_name}'")
+
+                    for entry in dg_entries:
+                        address_obj = {"name": entry.get("name") or "", "location": f"device-group:{dg_name}"}
+
+                        # Process the address object
+                        address_objects.append(self._process_address_entry(entry, address_obj))
+
+                except Exception as e:
+                    logger.error(f"Error retrieving address objects for device group '{dg_name}': {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Error retrieving device groups: {str(e)}")
+
+        # 3. Get vsys address objects (for backward compatibility with firewalls)
+        logger.info("Retrieving vsys address objects (for backward compatibility)")
+        vsys_params = {"type": "config", "action": "get", "xpath": "/config/devices/entry/vsys/entry/address"}
+        try:
+            root = await self._make_request(vsys_params)
+            vsys_entries = root.findall(".//entry")
+            logger.info(f"Found {len(vsys_entries)} vsys address objects")
+
+            # Find vsys name from the xpath rather than parent reference
+            # since standard ElementTree doesn't have getparent()
+            for entry in vsys_entries:
+                # Default to "unknown" if we can't determine the vsys name
+                vsys_name = "unknown"
+                address_obj = {"name": entry.get("name") or "", "location": f"vsys:{vsys_name}"}
+
+                # Process the address object
+                address_objects.append(self._process_address_entry(entry, address_obj))
+
+        except Exception as e:
+            # This might fail on Panorama, which is expected
+            logger.debug(f"Note: vsys address objects retrieval: {str(e)}")
+
+        logger.info(f"Total address objects found: {len(address_objects)}")
         return address_objects
+
+    def _process_address_entry(self, entry: ElementTree.Element, address_obj: dict[str, str]) -> dict[str, str]:
+        """Process an address entry XML element and extract its properties.
+
+        Args:
+            entry: The XML element representing an address object
+            address_obj: Partially populated address object dictionary
+
+        Returns:
+            Fully populated address object dictionary
+        """
+        # Check for different address types
+        ip_netmask = entry.find("ip-netmask")
+        if ip_netmask is not None and ip_netmask.text is not None:
+            address_obj["type"] = "ip-netmask"
+            address_obj["value"] = ip_netmask.text
+        elif (ip_range := entry.find("ip-range")) is not None and ip_range.text is not None:
+            address_obj["type"] = "ip-range"
+            address_obj["value"] = ip_range.text
+        elif (fqdn := entry.find("fqdn")) is not None and fqdn.text is not None:
+            address_obj["type"] = "fqdn"
+            address_obj["value"] = fqdn.text
+        else:
+            address_obj["type"] = "unknown"
+            address_obj["value"] = ""
+
+        # Get description if available
+        description = entry.find("description")
+        if description is not None and description.text is not None:
+            address_obj["description"] = description.text
+
+        # Get tags if available
+        tags = []
+        tag_elements = entry.findall("tag/member")
+        if tag_elements:
+            for tag in tag_elements:
+                if tag.text:
+                    tags.append(tag.text)
+            if tags:
+                address_obj["tags"] = ", ".join(tags)
+
+        return address_obj
 
     async def get_security_zones(self) -> list[dict[str, str]]:
         """Get security zones configured on the firewall.

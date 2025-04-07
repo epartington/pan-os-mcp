@@ -43,7 +43,7 @@ async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
     # Implementation details...
 ```
 
-This tool retrieves address objects configured on the Palo Alto Networks firewall, including their names, types, values, and descriptions.
+This tool retrieves address objects configured on the Palo Alto Networks firewall or Panorama, including their names, types, values, and descriptions. When connected to a Panorama device, it will organize address objects by device group, providing a hierarchical view of the configuration.
 
 ### retrieve_security_zones
 
@@ -104,13 +104,25 @@ async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
 
         # Format the address objects as a readable string
         formatted_output = "# Palo Alto Networks Firewall Address Objects\n\n"
+        
+        # Group address objects by location (device group or vsys)
+        objects_by_location = {}
         for obj in address_objects:
-            formatted_output += f"## {obj['name']}\n"
-            formatted_output += f"- **Type**: {obj.get('type', 'N/A')}\n"
-            formatted_output += f"- **Value**: {obj.get('value', 'N/A')}\n"
-            if 'description' in obj:
-                formatted_output += f"- **Description**: {obj['description']}\n"
-            formatted_output += "\n"
+            location = obj.get('location', 'unknown')
+            if location not in objects_by_location:
+                objects_by_location[location] = []
+            objects_by_location[location].append(obj)
+        
+        # Output address objects grouped by location
+        for location, objects in objects_by_location.items():
+            formatted_output += f"## {location} Address Objects\n\n"
+            for obj in objects:
+                formatted_output += f"### {obj['name']}\n"
+                formatted_output += f"- **Type**: {obj.get('type', 'N/A')}\n"
+                formatted_output += f"- **Value**: {obj.get('value', 'N/A')}\n"
+                if 'description' in obj:
+                    formatted_output += f"- **Description**: {obj['description']}\n"
+                formatted_output += "\n"
 
         return formatted_output
     except Exception as e:
