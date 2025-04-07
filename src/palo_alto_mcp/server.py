@@ -9,7 +9,7 @@ from palo_alto_mcp.pan_os_api import PanOSAPIClient
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -65,13 +65,31 @@ async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
 
         # Format the address objects as a readable string
         formatted_output = "# Palo Alto Networks Firewall Address Objects\n\n"
+
+        # Group address objects by location for better organization
+        objects_by_location = {}
         for obj in address_objects:
-            formatted_output += f"## {obj['name']}\n"
-            formatted_output += f"- **Type**: {obj.get('type', 'N/A')}\n"
-            formatted_output += f"- **Value**: {obj.get('value', 'N/A')}\n"
-            if "description" in obj:
-                formatted_output += f"- **Description**: {obj['description']}\n"
-            formatted_output += "\n"
+            location = obj.get("location", "Unknown")
+            if location not in objects_by_location:
+                objects_by_location[location] = []
+            objects_by_location[location].append(obj)
+
+        # Display objects grouped by location
+        for location, objects in objects_by_location.items():
+            formatted_output += f"## {location.capitalize()} Address Objects\n\n"
+
+            for obj in objects:
+                formatted_output += f"### {obj['name']}\n"
+                formatted_output += f"- **Type**: {obj.get('type', 'N/A')}\n"
+                formatted_output += f"- **Value**: {obj.get('value', 'N/A')}\n"
+
+                if "description" in obj:
+                    formatted_output += f"- **Description**: {obj['description']}\n"
+
+                if "tags" in obj:
+                    formatted_output += f"- **Tags**: {obj['tags']}\n"
+
+                formatted_output += "\n"
 
         return formatted_output
     except Exception as e:
