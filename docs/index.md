@@ -1,13 +1,13 @@
 # Palo Alto Networks MCP Server
 
-A Model Context Protocol (MCP) server that interfaces with Palo Alto Networks Next-Generation Firewalls (NGFW) via their XML API. This server enables MCP clients (like Windsurf) to retrieve firewall configuration data.
+A Model Context Protocol (MCP) server that interfaces with Palo Alto Networks Next-Generation Firewalls (NGFW) and Panorama via their XML API. This server enables MCP clients (like Windsurf) to retrieve firewall and Panorama configuration data.
 
 ## Key Features
 
 - Built using the `modelcontextprotocol` Python SDK with the `FastMCP` abstraction
-- Provides tools for retrieving firewall configuration data:
+- Provides tools for retrieving firewall and Panorama configuration data:
   - System information
-  - Address objects
+  - Address objects (with support for Panorama device groups)
   - Security zones
   - Security policies
 - Packaged as a standard Python module installable via `pip` or `uv`
@@ -26,7 +26,7 @@ A Model Context Protocol (MCP) server that interfaces with Palo Alto Networks Ne
 ```mermaid
 graph TD
     A[MCP Client<br>e.g., Windsurf] -->|Command-based execution<br>via stdio transport| B[Palo Alto MCP Server]
-    B -->|XML API Requests| C[Palo Alto Networks NGFW]
+    B -->|XML API Requests| C[Palo Alto Networks NGFW<br>or Panorama]
     C -->|XML Responses| B
     B -->|Formatted Results| A
 ```

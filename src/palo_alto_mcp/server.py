@@ -67,7 +67,7 @@ async def retrieve_address_objects(ctx: Context) -> str:  # noqa: ARG001
         formatted_output = "# Palo Alto Networks Firewall Address Objects\n\n"
 
         # Group address objects by location for better organization
-        objects_by_location = {}
+        objects_by_location: dict[str, list[dict[str, str]]] = {}
         for obj in address_objects:
             location = obj.get("location", "Unknown")
             if location not in objects_by_location:

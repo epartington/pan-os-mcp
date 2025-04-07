@@ -9,11 +9,11 @@ class PanOSAPIClient:
     """Client for interacting with the Palo Alto Networks XML API.
 
     This class provides methods for retrieving data from a Palo Alto Networks
-    Next-Generation Firewall (NGFW) through its XML API.
+    Next-Generation Firewall (NGFW) or Panorama through its XML API.
 
     Attributes:
-        hostname: The hostname or IP address of the NGFW.
-        api_key: The API key for authenticating with the NGFW.
+        hostname: The hostname or IP address of the NGFW or Panorama.
+        api_key: The API key for authenticating with the NGFW or Panorama.
         client: An httpx AsyncClient for making HTTP requests.
     """
 ```
@@ -139,21 +139,91 @@ This method retrieves system information from the firewall, including hostname, 
 
 ```python
 async def get_address_objects(self) -> list[dict[str, str]]:
-    """Get address objects configured on the firewall.
+    """Get address objects configured on the firewall or Panorama.
 
     Returns:
         List of dictionaries containing address object information.
     """
-    params = {"type": "config", "action": "get", "xpath": "/config/devices/entry/vsys/entry/address"}
-
-    root = await self._make_request(params)
-    entries = root.findall(".//entry")
-
+    # First, check if this is a Panorama by trying to get device groups
+    is_panorama = False
+    device_groups = []
+    
+    try:
+        # Try to get device groups (only works on Panorama)
+        dg_params = {
+            "type": "config",
+            "action": "get",
+            "xpath": "/config/devices/entry/device-group",
+        }
+        dg_root = await self._make_request(dg_params)
+        dg_entries = dg_root.findall(".//entry")
+        
+        if dg_entries:
+            is_panorama = True
+            device_groups = [entry.get("name") for entry in dg_entries if entry.get("name")]
+            logger.info(f"Detected Panorama with {len(device_groups)} device groups")
+    except Exception as e:
+        logger.warning(f"Failed to check for device groups, assuming firewall: {str(e)}")
+    
     address_objects = []
-    for entry in entries:
-        address_obj = {"name": entry.get("name") or ""}
-
-        # Check for different address types
+    
+    if is_panorama:
+        # Process device groups for Panorama
+        for dg_name in device_groups:
+            if not dg_name:
+                continue
+                
+            # Get addresses for this device group
+            dg_addr_params = {
+                "type": "config",
+                "action": "get",
+                "xpath": f"/config/devices/entry/device-group/entry[@name='{dg_name}']/address",
+            }
+            
+            dg_addr_root = await self._make_request(dg_addr_params)
+            dg_entries = dg_addr_root.findall(".//entry")
+            
+            # Process each address object in the device group
+            for entry in dg_entries:
+                address_obj = {"name": entry.get("name") or "", "location": f"device-group:{dg_name}"}
+                
+                # Process the address object types and values
+                ip_netmask = entry.find("ip-netmask")
+                if ip_netmask is not None and ip_netmask.text is not None:
+                    address_obj["type"] = "ip-netmask"
+                    address_obj["value"] = ip_netmask.text
+                elif (ip_range := entry.find("ip-range")) is not None and ip_range.text is not None:
+                    address_obj["type"] = "ip-range"
+                    address_obj["value"] = ip_range.text
+                elif (fqdn := entry.find("fqdn")) is not None and fqdn.text is not None:
+                    address_obj["type"] = "fqdn"
+                    address_obj["value"] = fqdn.text
+                else:
+                    address_obj["type"] = "unknown"
+                    address_obj["value"] = ""
+                
+                # Get description if available
+                description = entry.find("description")
+                if description is not None and description.text is not None:
+                    address_obj["description"] = description.text
+                
+                address_objects.append(address_obj)
+    
+    # Always check for vsys address objects (works for both firewall and Panorama)
+    vsys_params = {
+        "type": "config",
+        "action": "get",
+        "xpath": "/config/devices/entry/vsys/entry/address",
+    }
+    
+    vsys_root = await self._make_request(vsys_params)
+    vsys_entries = vsys_root.findall(".//entry")
+    
+    # Process each address object in vsys
+    for entry in vsys_entries:
+        address_obj = {"name": entry.get("name") or "", "location": "vsys"}
+        
+        # Process the address object types and values
         ip_netmask = entry.find("ip-netmask")
         if ip_netmask is not None and ip_netmask.text is not None:
             address_obj["type"] = "ip-netmask"
@@ -167,18 +237,18 @@ async def get_address_objects(self) -> list[dict[str, str]]:
         else:
             address_obj["type"] = "unknown"
             address_obj["value"] = ""
-
+        
         # Get description if available
         description = entry.find("description")
         if description is not None and description.text is not None:
             address_obj["description"] = description.text
-
+        
         address_objects.append(address_obj)
-
+    
     return address_objects
 ```
 
-This method retrieves address objects configured on the firewall, including their names, types, values, and descriptions.
+This method retrieves address objects configured on the firewall or Panorama, including their names, types, values, descriptions, and locations (device group or vsys).
 
 ### get_security_zones
 
