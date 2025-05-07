@@ -1,0 +1,14 @@
+services:
+  panos-mcp:
+    platform: linux/amd64
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile
+    env_file:
+      - ../environment/.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    tty: true
+    environment:
+      - PYTHONUNBUFFERED=1

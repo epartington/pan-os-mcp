@@ -13,7 +13,7 @@ This package provides an MCP server that enables MCP clients (like Windsurf) to 
 - Retrieve security policies from Palo Alto Networks firewalls
 - Get system information from Palo Alto Networks firewalls
 - Built using the `FastMCP` class from the `modelcontextprotocol` Python SDK
-- Supports standard I/O transport for command-based integration
+- Exposes network (HTTP/SSE) endpoints for integration with Windsurf and MCP clients
 
 ## Installation
 
@@ -34,33 +34,42 @@ pip install .
 
 ## Configuration
 
-The server requires the following environment variables to be set:
+The server requires the following environment variables to be set (can be provided via a `.env` file in the project root):
 
 - `PANOS_HOSTNAME`: Hostname or IP address of the Palo Alto Networks NGFW
 - `PANOS_API_KEY`: API key for authenticating with the Palo Alto Networks NGFW
 
 Optional environment variables:
 
-- `DEBUG`: Set to `true` to enable debug logging (default: `false`)
+- `PANOS_DEBUG`: Set to `true` to enable debug logging (default: `false`)
 
-Example configuration:
+Example `.env` file:
 
-```bash
-export PANOS_HOSTNAME="192.168.1.1"
-export PANOS_API_KEY="your-api-key-here"
+```
+PANOS_HOSTNAME=192.168.1.1
+PANOS_API_KEY=your-api-key-here
+PANOS_DEBUG=true
 ```
 
 ## Usage
 
-### Running the Server Directly
+### Running the Server (Network/SSE mode)
 
 ```bash
-# Using the module
 python -m palo_alto_mcp
-
-# Using the entry point script
-palo-alto-mcp
 ```
+
+This will launch the MCP server as a network server, exposing HTTP/SSE endpoints for integration with Windsurf and other MCP clients.
+
+### SSE Endpoints
+
+- `/sse` — Main Server-Sent Events (SSE) endpoint for client-server communication
+- `/messages/` — Message endpoint for SSE transport (required for Windsurf/MCP clients)
+
+Ensure your client configuration points to these endpoints for correct operation.
+palo-alto-mcp
+
+````
 
 ### Integration with MCP Clients
 
@@ -82,7 +91,7 @@ Example client configuration in `mcp_config.json`:
     }
   ]
 }
-```
+````
 
 ## Available Tools
 
@@ -91,6 +100,7 @@ Example client configuration in `mcp_config.json`:
 Get system information from the Palo Alto Networks firewall.
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall System Information
 
@@ -106,6 +116,7 @@ Get system information from the Palo Alto Networks firewall.
 Get address objects configured on the Palo Alto Networks firewall.
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall Address Objects
 
@@ -125,6 +136,7 @@ Get address objects configured on the Palo Alto Networks firewall.
 Get security zones configured on the Palo Alto Networks firewall.
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall Security Zones
 
@@ -145,6 +157,7 @@ Get security zones configured on the Palo Alto Networks firewall.
 Get security policies configured on the Palo Alto Networks firewall.
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall Security Policies
 
