@@ -13,10 +13,10 @@ packages = [{ include = "palo_alto_mcp", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-modelcontextprotocol = ">=0.1.0"
 httpx = ">=0.28.1"
 pydantic = ">=2.11.2"
 pydantic-settings = ">=2.8.1"
+mcp = "^1.7.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.3.5"

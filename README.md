@@ -8,12 +8,13 @@ This package provides an MCP server that enables MCP clients (like Windsurf) to 
 
 ## Features
 
-- Retrieve address objects from Palo Alto Networks firewalls
+- Retrieve address objects from Palo Alto Networks firewalls and Panorama
 - Retrieve security zones from Palo Alto Networks firewalls
 - Retrieve security policies from Palo Alto Networks firewalls
 - Get system information from Palo Alto Networks firewalls
+- Support for Panorama device groups and shared address objects
 - Built using the `FastMCP` class from the `modelcontextprotocol` Python SDK
-- Supports standard I/O transport for command-based integration
+- Exposes network (HTTP/SSE) endpoints for integration with Windsurf and MCP clients
 
 ## Installation
 
@@ -34,33 +35,39 @@ pip install .
 
 ## Configuration
 
-The server requires the following environment variables to be set:
+The server requires the following environment variables to be set (can be provided via a `.env` file in the project root):
 
 - `PANOS_HOSTNAME`: Hostname or IP address of the Palo Alto Networks NGFW
 - `PANOS_API_KEY`: API key for authenticating with the Palo Alto Networks NGFW
 
 Optional environment variables:
 
-- `DEBUG`: Set to `true` to enable debug logging (default: `false`)
+- `PANOS_DEBUG`: Set to `true` to enable debug logging (default: `false`)
 
-Example configuration:
+Example `.env` file:
 
-```bash
-export PANOS_HOSTNAME="192.168.1.1"
-export PANOS_API_KEY="your-api-key-here"
+```
+PANOS_HOSTNAME=192.168.1.1
+PANOS_API_KEY=your-api-key-here
+PANOS_DEBUG=true
 ```
 
 ## Usage
 
-### Running the Server Directly
+### Running the Server (Network/SSE mode)
 
 ```bash
-# Using the module
 python -m palo_alto_mcp
-
-# Using the entry point script
-palo-alto-mcp
 ```
+
+This will launch the MCP server as a network server, exposing HTTP/SSE endpoints for integration with Windsurf and other MCP clients.
+
+### SSE Endpoints
+
+- `/sse` — Main Server-Sent Events (SSE) endpoint for client-server communication
+- `/messages/` — Message endpoint for SSE transport (required for Windsurf/MCP clients)
+
+Ensure your client configuration points to these endpoints for correct operation.
 
 ### Integration with MCP Clients
 
@@ -91,6 +98,7 @@ Example client configuration in `mcp_config.json`:
 Get system information from the Palo Alto Networks firewall.
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall System Information
 
@@ -103,21 +111,27 @@ Get system information from the Palo Alto Networks firewall.
 
 ### `retrieve_address_objects`
 
-Get address objects configured on the Palo Alto Networks firewall.
+Get address objects configured on the Palo Alto Networks firewall or Panorama. Address objects are grouped by location (shared, device group, or vsys).
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall Address Objects
 
-## web-server
+## Shared Address Objects
+
+### web-server
 - **Type**: ip-netmask
 - **Value**: 10.1.1.100/32
 - **Description**: Web Server
 
-## internal-network
+## Device-group:Production Address Objects
+
+### internal-network
 - **Type**: ip-netmask
 - **Value**: 10.1.0.0/16
 - **Description**: Internal Network
+- **Tags**: internal, production
 ```
 
 ### `retrieve_security_zones`
@@ -125,6 +139,7 @@ Get address objects configured on the Palo Alto Networks firewall.
 Get security zones configured on the Palo Alto Networks firewall.
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall Security Zones
 
@@ -145,6 +160,7 @@ Get security zones configured on the Palo Alto Networks firewall.
 Get security policies configured on the Palo Alto Networks firewall.
 
 **Example Response:**
+
 ```
 # Palo Alto Networks Firewall Security Policies
 
@@ -224,3 +240,4 @@ MIT
 - **Type Hints**: Strong typing with Python type hints
 - **Context Managers**: Using async context managers for resource management
 - **XML Parsing**: Using the built-in `xml.etree.ElementTree` for parsing XML responses
+- **Panorama Support**: Handling Panorama device groups and shared objects

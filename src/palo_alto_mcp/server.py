@@ -30,6 +30,9 @@ async def show_system_info(ctx: Context) -> str:  # noqa: ARG001
 
     try:
         settings = get_settings()
+        logger.info(
+            f"Loaded PANOS_HOSTNAME={settings.panos_hostname}, PANOS_API_KEY={'set' if settings.panos_api_key else 'unset'}"
+        )
         async with PanOSAPIClient(settings) as client:
             system_info = await client.get_system_info()
 
@@ -207,17 +210,13 @@ async def retrieve_security_policies(ctx: Context) -> str:  # noqa: ARG001
 
 
 def main() -> None:
-    """Run the MCP server."""
-    try:
-        # Validate settings on startup
-        get_settings()
-
-        # Start the server
-        logger.info("Starting Palo Alto Networks MCP Server")
-        mcp.run()
-    except Exception as e:
-        logger.error(f"Failed to start server: {str(e)}")
-        raise
+    """
+    Run the MCP server as a network server with SSE endpoints.
+    Exposes /sse and /messages/ endpoints for Windsurf and MCP clients.
+    """
+    get_settings()
+    logger.info("Starting Palo Alto Networks MCP Server")
+    mcp.run(transport="sse")
 
 
 if __name__ == "__main__":
