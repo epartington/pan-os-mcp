@@ -26,7 +26,7 @@ class PanOSAPIClient:
 
     """
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self: "PanOSAPIClient", settings: Settings) -> None:
         """Initialize the PanOSAPIClient.
 
         Args:
@@ -38,7 +38,7 @@ class PanOSAPIClient:
         self.base_url = f"https://{self.hostname}/api/"
         self.client = httpx.AsyncClient(verify=False)  # In production, use proper cert verification
 
-    async def __aenter__(self) -> "PanOSAPIClient":
+    async def __aenter__(self: "PanOSAPIClient") -> "PanOSAPIClient":
         """Async context manager entry.
 
         Returns:
@@ -48,7 +48,7 @@ class PanOSAPIClient:
         return self
 
     async def __aexit__(
-        self,
+        self: "PanOSAPIClient",
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: object,
@@ -63,11 +63,11 @@ class PanOSAPIClient:
         """
         await self.close()
 
-    async def close(self) -> None:
+    async def close(self: "PanOSAPIClient") -> None:
         """Close the HTTP client."""
         await self.client.aclose()
 
-    async def _make_request(self, params: dict[str, str]) -> ElementTree.Element:
+    async def _make_request(self: "PanOSAPIClient", params: dict[str, str]) -> ElementTree.Element:
         """Make a request to the Palo Alto Networks XML API.
 
         Args:
@@ -118,7 +118,7 @@ class PanOSAPIClient:
             logger.error(f"Unexpected error: {str(e)}")
             raise Exception(f"Unexpected error: {str(e)}") from e
 
-    async def get_system_info(self) -> dict[str, str]:
+    async def get_system_info(self: "PanOSAPIClient") -> dict[str, str]:
         """Get system information from the firewall.
 
         Returns:
@@ -159,7 +159,7 @@ class PanOSAPIClient:
 
         return system_info
 
-    async def get_address_objects(self) -> list[dict[str, str]]:
+    async def get_address_objects(self: "PanOSAPIClient") -> list[dict[str, str]]:
         """Get address objects configured on the firewall.
 
         Returns:
@@ -266,7 +266,11 @@ class PanOSAPIClient:
         logger.info(f"Total address objects found: {len(address_objects)}")
         return address_objects
 
-    def _process_address_entry(self, entry: ElementTree.Element, address_obj: dict[str, str]) -> dict[str, str]:
+    def _process_address_entry(
+        self: "PanOSAPIClient",
+        entry: ElementTree.Element,
+        address_obj: dict[str, str],
+    ) -> dict[str, str]:
         """Process an address entry XML element and extract its properties.
 
         Args:
@@ -308,7 +312,7 @@ class PanOSAPIClient:
 
         return address_obj
 
-    async def get_security_zones(self) -> list[dict[str, str]]:
+    async def get_security_zones(self: "PanOSAPIClient") -> list[dict[str, str]]:
         """Get security zones configured on the firewall.
 
         Returns:
@@ -352,7 +356,7 @@ class PanOSAPIClient:
 
         return zones
 
-    async def get_security_policies(self) -> list[dict[str, str]]:
+    async def get_security_policies(self: "PanOSAPIClient") -> list[dict[str, str]]:
         """Get security policies configured on the firewall.
 
         Returns:

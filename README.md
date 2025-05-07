@@ -8,10 +8,11 @@ This package provides an MCP server that enables MCP clients (like Windsurf) to 
 
 ## Features
 
-- Retrieve address objects from Palo Alto Networks firewalls
+- Retrieve address objects from Palo Alto Networks firewalls and Panorama
 - Retrieve security zones from Palo Alto Networks firewalls
 - Retrieve security policies from Palo Alto Networks firewalls
 - Get system information from Palo Alto Networks firewalls
+- Support for Panorama device groups and shared address objects
 - Built using the `FastMCP` class from the `modelcontextprotocol` Python SDK
 - Exposes network (HTTP/SSE) endpoints for integration with Windsurf and MCP clients
 
@@ -67,9 +68,6 @@ This will launch the MCP server as a network server, exposing HTTP/SSE endpoints
 - `/messages/` — Message endpoint for SSE transport (required for Windsurf/MCP clients)
 
 Ensure your client configuration points to these endpoints for correct operation.
-palo-alto-mcp
-
-````
 
 ### Integration with MCP Clients
 
@@ -91,7 +89,7 @@ Example client configuration in `mcp_config.json`:
     }
   ]
 }
-````
+```
 
 ## Available Tools
 
@@ -113,22 +111,27 @@ Get system information from the Palo Alto Networks firewall.
 
 ### `retrieve_address_objects`
 
-Get address objects configured on the Palo Alto Networks firewall.
+Get address objects configured on the Palo Alto Networks firewall or Panorama. Address objects are grouped by location (shared, device group, or vsys).
 
 **Example Response:**
 
 ```
 # Palo Alto Networks Firewall Address Objects
 
-## web-server
+## Shared Address Objects
+
+### web-server
 - **Type**: ip-netmask
 - **Value**: 10.1.1.100/32
 - **Description**: Web Server
 
-## internal-network
+## Device-group:Production Address Objects
+
+### internal-network
 - **Type**: ip-netmask
 - **Value**: 10.1.0.0/16
 - **Description**: Internal Network
+- **Tags**: internal, production
 ```
 
 ### `retrieve_security_zones`
@@ -237,3 +240,4 @@ MIT
 - **Type Hints**: Strong typing with Python type hints
 - **Context Managers**: Using async context managers for resource management
 - **XML Parsing**: Using the built-in `xml.etree.ElementTree` for parsing XML responses
+- **Panorama Support**: Handling Panorama device groups and shared objects

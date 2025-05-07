@@ -80,3 +80,5 @@ site/
 
 # ruff
 .ruff_cache/
+
+**/.claude/settings.local.json
