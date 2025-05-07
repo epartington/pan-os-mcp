@@ -3,8 +3,8 @@ name: Code Quality
 
 on:
   pull_request:
-    branches: ["main", "swap-back-to-python"]
-  workflow_dispatch: yes
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
   lint-format:
