@@ -1,3 +1,4 @@
+---
 services:
   panos-mcp:
     platform: linux/amd64

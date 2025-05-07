@@ -1,3 +1,4 @@
+---
 # See https://pre-commit.com for more information
 # This config runs the same code quality checks as .github/workflows/code-quality.yml
 repos:
