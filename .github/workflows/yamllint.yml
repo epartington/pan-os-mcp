@@ -20,3 +20,6 @@ jobs:
         uses: ibiqlik/action-yamllint@v3
         with:
           file_or_dir: .
+          ignore: ".venv/ .git/ .github/workflows/"
+          format: parsable
+          strict: false

@@ -4,7 +4,7 @@ name: Code Quality
 on:
   pull_request:
     branches: ["main", "swap-back-to-python"]
-  workflow_dispatch:
+  workflow_dispatch: yes
 
 jobs:
   lint-format:

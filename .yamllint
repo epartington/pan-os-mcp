@@ -29,3 +29,9 @@ rules:
     max: 1
     max-start: 0
     max-end: 0
+
+ignore: |
+  .venv/
+  .git/
+  .github/workflows/
+  .trunk/

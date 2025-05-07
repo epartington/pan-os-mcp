@@ -3,7 +3,7 @@ name: "gen: AI review"
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
-  issue_comment:
+  issue_comment: yes
 jobs:
   pr_agent_job:
     if: ${{ github.event.sender.type != 'Bot' }}
