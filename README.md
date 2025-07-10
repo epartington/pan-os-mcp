@@ -91,6 +91,20 @@ Example client configuration in `mcp_config.json`:
 }
 ```
 
+#### Integration with VSCode
+
+https://code.visualstudio.com/docs/copilot/chat/mcp-servers
+
+```json
+"mcp": {
+        "servers": {
+            "<MCP-SERVER-NAME>": {
+                "url": "http://<IP/URL>:<PORT IF REQUIRED>/"
+            }
+        }
+    }
+```
+
 ## Available Tools
 
 ### `show_system_info`
